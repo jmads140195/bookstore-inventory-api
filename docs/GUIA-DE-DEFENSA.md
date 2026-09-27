@@ -1,399 +1,178 @@
-# Guía de defensa técnica: Bookstore Inventory API
+# Guía de defensa técnica
 
-Esta guía acompaña el código de la prueba de Nextep. Está pensada para alguien
-que conoce arquitectura y está retomando Python y Django. Practica las respuestas
-con el proyecto abierto y verifica que puedes señalar el código correspondiente.
+Para retomar Python y Django desde conocimientos de arquitectura. Léela con Swagger y el código abiertos. El objetivo es poder explicar y modificar lo entregado. Si te preguntan por herramientas utilizadas, explica con honestidad el apoyo de IA y qué revisaste y probaste personalmente.
 
-**Estado de la entrega:** la implementación y su ejecución local están preparadas.
-El despliegue público y PostgreSQL gestionado requieren completar la configuración
-de Render. Consulta `DESPLIEGUE.md` y `VALIDACION.md` para separar preparación de
-resultados efectivamente verificados.
+## 1. Explicación en 90 segundos
 
-## 1. Explicación de 90 segundos
-
-> Construí una API REST de inventario de libros con Django y Django REST Framework.
-> El modelo Book tiene los datos del enunciado y restricciones de integridad.
-> Los serializers validan las peticiones y convierten los modelos en JSON.
-> El ViewSet expone el CRUD y los endpoints adicionales de búsqueda, stock bajo
-> y cálculo de precio.
+> La solución es una API REST de inventario con Django y Django REST Framework. El modelo define los datos de los libros y sus restricciones; los serializers validan JSON y el ViewSet expone CRUD, búsqueda y stock bajo.
 >
-> El cálculo consulta una API de tasas, convierte el costo en dólares y aplica
-> el recargo del 40 % que muestra el ejemplo. Trabajo con Decimal y redondeo a
-> dos decimales al final. Si el proveedor falla, uso una tasa de respaldo
-> configurable e indico en la respuesta que se utilizó. Si tampoco hay un
-> respaldo válido, respondo 503.
+> El precio convierte el costo en dólares con una tasa guardada y aplica un recargo del 40 %, como en el ejemplo. Uso Decimal y redondeo al final. Un proceso independiente actualiza la tasa a las 8:00 y 15:00 de Caracas. Si el proveedor falla, conserva la última conocida, informa su antigüedad y reintenta. Pasadas 48 horas bloquea nuevos cálculos para no presentar un valor indefinidamente viejo.
 >
-> El proyecto incluye pruebas automatizadas, Postman, documentación OpenAPI y
-> Docker. PostgreSQL es la base del entorno Docker y del despliegue propuesto.
-> La configuración de producción exige PostgreSQL y secretos externos.
+> Agregué login con tokens revocables y dos roles: básico consulta; completo modifica el inventario y administra usuarios. Las sesiones vencen y se revocan al cambiar contraseña o permisos. Hay límites de peticiones y validación explícita de campos.
+>
+> Docker ejecuta la API, PostgreSQL y el actualizador. Incluí tests, Postman y documentación OpenAPI. La configuración cloud está preparada y debe verificarse con su URL pública para completar la entrega.
 
-Adapta la última parte al estado real de tu despliegue. Cuando esté publicado,
-muestra su URL y el resultado de Postman en producción.
+Adapta la última frase únicamente después de publicar y verificar la nube. No digas que está desplegado mientras falte ese paso.
 
-## 2. El mapa que debes poder dibujar
+## 2. Recorrido de una petición
 
-```text
-Cliente / Postman
-       |
-       v
-config/urls.py -> books/urls.py -> BookViewSet
-                                      |
-                     +----------------+----------------+
-                     |                                 |
-              BookSerializer                    services.py
-           valida entradas/salidas          consulta tasas y calcula
-                     |                                 |
-                     +----------> modelo Book <--------+
-                                      |
-                                     ORM
-                                      |
-                                  PostgreSQL
+```mermaid
+flowchart TD
+    C[Postman o cliente] --> A[Autenticar token]
+    A --> P[Comprobar rol y límites]
+    P --> V[Vista o ViewSet]
+    V --> S[Serializer valida JSON]
+    S --> M[Modelo y ORM]
+    M --> DB[(PostgreSQL)]
+    V --> CAL[Servicio de precio con Decimal]
+    CAL --> DB
+    W[Worker a las 8 y 15 Caracas] --> EXT[Proveedor de tasas]
+    EXT --> W
+    W --> DB
 ```
 
-Para un POST de creación, el serializer valida y guarda. Para calcular el precio,
-la vista localiza el libro, llama al servicio y serializa el resultado.
+Para calcular, la vista comprueba que existe el libro, lee la tasa persistida, bloquea la fila del libro y guarda el precio con su costo vigente. La red externa está en el proceso de sincronización.
 
-| Archivo | Qué debes saber explicar |
-| --- | --- |
-| `books/models.py` | Campos, tipos, unicidad y restricciones SQL. |
-| `books/validators.py` | Normalización, ISBN-10/13 y país ISO. |
-| `books/serializers.py` | JSON, validación, campos de solo lectura, duplicados y actualización. |
-| `books/views.py` | Rutas del CRUD, filtros y coordinación del cálculo. |
-| `books/services.py` | Proveedor, fallback, Decimal y transacción del precio. |
-| `config/exceptions.py` | Respuestas uniformes y errores sanitizados. |
-| `config/settings.py` | Entornos, conexión, moneda, respaldo y seguridad. |
-| `Dockerfile`, `docker-compose.yml` | Aplicación, Gunicorn, PostgreSQL y arranque. |
-| `render.yaml` | Recursos propuestos en la nube y variables. |
-
-## 3. Python y Django imprescindibles
-
-| Construcción | Lectura práctica |
-| --- | --- |
-| `from books.models import Book` | Importar la clase Book. |
-| `class Book(models.Model)` | Definir un modelo que hereda las herramientas del ORM. |
-| `def calculate_book_price(book_id)` | Definir una función que recibe un identificador. |
-| `self` | Referencia al objeto actual dentro de un método. |
-| `return {...}` | Devolver un diccionario de claves y valores. |
-| `with transaction.atomic()` | Ejecutar un bloque dentro de una transacción. |
-| `try / except` | Tratar un fallo previsto y decidir cómo responder. |
-| `@action(...)` | Declarar una acción adicional del ViewSet y su ruta. |
-| `Book.objects.get(pk=...)` | Buscar una fila por clave primaria. |
-| `filter(stock_quantity__lt=10)` | Buscar filas cuyo stock sea menor que 10. |
-| `Decimal("15.99")` | Construir un valor decimal a partir de texto. |
-
-La indentación delimita bloques en Python. Un diccionario es una estructura
-de Python; JSON es el formato de intercambio. El framework transforma entre
-ambos. `None` en Python se representa como `null` en JSON.
-
-Una aplicación Django como `books` es un módulo del proyecto. No implica otro
-servidor ni un microservicio. El proyecto conserva una sola aplicación desplegable.
-
-## 4. Recorrido del CRUD
-
-### Crear
-
-1. `POST /books` llega al router y a la acción `create` heredada del ViewSet.
-2. El serializer normaliza ISBN y país antes de validar.
-3. Comprueba tipos, campos obligatorios, ISBN, costo positivo y stock no negativo.
-4. La validación de unicidad detecta un ISBN ya registrado.
-5. El ORM inserta la fila; la restricción UNIQUE también protege la base.
-6. La respuesta es 201 con el libro creado.
-
-### Consultar
-
-`GET /books` devuelve una lista paginada de 20 elementos, ordenada por ID.
-`GET /books/{id}` obtiene un registro; un ID inexistente devuelve 404.
-
-### Actualizar
-
-`PUT` requiere los campos editables obligatorios; `PATCH` permite cambios
-parciales. Si cambia `cost_usd`, se borra el precio calculado y queda `null`.
-Cambiar solamente el stock conserva el precio. ID, fechas y precio de venta
-son de solo lectura en la API; los valores enviados en esos campos se ignoran.
-
-### Eliminar
-
-`DELETE` devuelve 204 sin cuerpo. Consultar ese ID después devuelve 404.
-No hay borrado lógico en esta prueba.
-
-## 5. El cálculo que debes poder hacer a mano
-
-Con los valores del enunciado:
-
-```text
-cost_usd = 15.99
-exchange_rate = 0.85
-
-cost_local exacto = 15.99 × 0.85 = 13.5915
-precio exacto = 13.5915 × 1.40 = 19.02810
-precio guardado = 19.03
-cost_local mostrado = 13.59
-```
-
-**Decisión:** interpretar el 40 % siguiendo el ejemplo como recargo sobre el
-costo. Un margen bruto del 40 % sobre el precio final usaría `costo / 0.60`
-y produciría otro resultado. Se conserva `margin_percentage` porque así lo
-llama el contrato del enunciado.
-
-**Redondeo:** usar el costo convertido sin redondear para aplicar el recargo.
-Redondear primero el costo puede alterar el precio final. Hay una prueba con
-costo `0.01` y tasa `0.45`: el costo mostrado es `0.00`, pero el precio final
-redondeado es `0.01`.
-
-**Representación:** los importes salen en JSON como cadenas, por ejemplo
-`"19.03"`. Esa decisión conserva la precisión y los ceros decimales. El PDF
-usa números en su ejemplo; esta diferencia de representación está documentada.
-
-**Moneda:** EUR por defecto, configurable con `LOCAL_CURRENCY`. El modelo sigue
-el enunciado y tiene un solo precio local. Si cambia la moneda global, hay que
-recalcular los precios existentes. No se mantiene un historial multimoneda.
-
-## 6. Qué significa «tiempo real» aquí
-
-Cada petición de cálculo intenta consultar el endpoint de tasas indicado en
-la prueba. Se utiliza la última cotización que entregue ese proveedor.
-La consulta bajo demanda no garantiza cotizaciones de mercado por segundo;
-la frecuencia de actualización depende del proveedor y de su plan.
-
-La implementación usa `https://api.exchangerate-api.com/v4/latest/USD`.
-No guarda todas las cotizaciones ni implementa caché. Una evolución sería
-cachear respetando la cadencia del proveedor y registrar la antigüedad de la tasa.
-
-## 7. Fallos del proveedor y fallback
-
-Se comprueban errores HTTP, timeout, JSON inválido, base distinta de USD,
-moneda ausente y tasas nulas, negativas, no finitas o fuera del límite admitido.
-
-- Si la API responde correctamente: `rate_source="api"` y `used_fallback=false`.
-- Si falla y existe respaldo válido: 200, `rate_source="fallback"`,
-  `used_fallback=true` y un aviso visible.
-- Si tampoco sirve el respaldo: 503 y el precio anterior no se modifica.
-
-La tasa `0.85` es un respaldo ilustrativo para EUR, no una cotización actual.
-Si se configura otra moneda, se debe configurar su tasa de respaldo explícita.
-El código limita las tasas a un valor positivo y como máximo `1e12`; además
-rechaza un precio que exceda la capacidad de `selling_price_local`.
-
-Se configuran timeouts de conexión y lectura de 3.05 y 5 segundos. No hay un
-bucle de reintentos que retenga un worker indefinidamente. Estos timeouts no
-constituyen una garantía estricta del tiempo total de la petición.
-
-## 8. Concurrencia: el punto fuerte para explicar
-
-Dos solicitudes pueden intentar crear el mismo ISBN al mismo tiempo. Aunque
-ambas pasen la consulta previa del serializer, la base impone UNIQUE. Se captura
-el conflicto y se transforma en 400. La validación previa mejora el mensaje;
-la restricción SQL garantiza integridad frente a esa carrera.
-
-En el cálculo se consulta al proveedor **antes** de bloquear la fila. Después,
-en una transacción, se obtiene el libro con `select_for_update()`, se lee su costo
-actual y se guarda el precio. Las actualizaciones HTTP usan el mismo bloqueo.
-Así una respuesta de red lenta no mantiene un bloqueo y el cálculo utiliza el
-costo que encuentra al adquirirlo.
-
-PostgreSQL proporciona el bloqueo real. SQLite no ofrece el mismo comportamiento;
-por eso la prueba de concurrencia se omite en SQLite y se ejecuta en PostgreSQL.
-El test toma un bloqueo, lanza el cálculo en otra conexión, modifica el costo,
-libera la transacción y comprueba que el cálculo usa el costo confirmado.
-
-## 9. Demo de ocho minutos
-
-| Tiempo | Acción | Qué explicar |
+| Pieza | En términos sencillos | Archivo |
 | --- | --- | --- |
-| 0:00–1:00 | Abrir `/docs` y `/ready`. | Contrato y comprobación de conexión a la base. |
-| 1:00–2:00 | Crear un libro y mostrar su ID. | Validación y respuesta 201. |
-| 2:00–3:00 | Repetir el ISBN y enviar costo cero. | Errores 400 y consistencia. |
-| 3:00–4:30 | Calcular precio y volver a consultar el libro. | Tasa, recargo, redondeo y persistencia. |
-| 4:30–5:30 | Cambiar el costo. | El precio anterior queda invalidado. |
-| 5:30–6:30 | Filtrar categoría y stock bajo. | Parámetros y límite estrictamente menor. |
-| 6:30–7:00 | Eliminar y consultar de nuevo. | 204 y 404. |
-| 7:00–8:00 | Mostrar tests y Docker. | Casos de error reproducibles y PostgreSQL. |
+| Django | Base del backend: configuración, ORM, migraciones y usuarios. | `config/settings.py` |
+| DRF | Herramientas REST: JSON, endpoints, permisos y errores. | `books/views.py` |
+| Modelo | Esquema y reglas persistentes de una entidad. | `books/models.py` |
+| Migración | Cambio versionado del esquema SQL. | `books/migrations/` |
+| Serializer | Valida datos entrantes y construye respuestas. | `books/serializers.py` |
+| ViewSet | Agrupa acciones del mismo recurso. | `books/views.py` |
+| Servicio | Regla de negocio independiente del HTTP. | `books/services.py` |
+| Autenticación | Identificar quién hace la petición. | `accounts/views.py` |
+| Autorización | Decidir qué puede hacer esa persona. | `accounts/permissions.py` |
+| Worker | Proceso separado que realiza tareas programadas. | `rates/management/commands/run_rate_scheduler.py` |
 
-La colección Postman recorre estos casos automáticamente. El ISBN de prueba
-se genera por ejecución. No utiliza ni elimina los libros que ya hubiera en
-el inventario. Para explicar un paso, también puedes ejecutar las peticiones
-individualmente después de crear el libro.
+## 3. Python mínimo que debes reconocer
 
-Para demostrar exactamente `19.03`, ejecuta el test con tasa `0.85` simulada:
+```python
+from decimal import Decimal
 
-```text
-docker compose exec web python manage.py test books.test_api.BookAPITests.test_price_matches_pdf_and_is_persisted
+multiplier = Decimal("1.40")
+price = cost * rate * multiplier
 ```
 
-Para demostrar el fallo del proveedor de manera reproducible:
+`import` trae funciones/clases; `def` define una función; `class` define una clase; `self` es el objeto actual. Un diccionario es `{ "campo": valor }`. `None` representa ausencia de valor y se convierte en `null` en JSON. `with transaction.atomic()` crea una transacción; `try/except` captura fallos previstos; los decoradores como `@action` agregan comportamiento a métodos.
 
-```text
-docker compose exec web python manage.py test books.test_api.BookAPITests.test_provider_timeout_uses_fallback
+```python
+Book.objects.filter(stock_quantity__lt=10)
 ```
 
-Explica que es un test con una dependencia simulada. El cálculo real puede
-devolver otro importe porque la tasa actual cambia.
+Equivale conceptualmente a pedir libros donde stock sea menor que 10. `__lt` significa menor que y `__iexact` comparación exacta sin distinguir mayúsculas. El ORM parametriza valores; no se concatena SQL del cliente.
 
-## 10. Preguntas probables y respuestas defendibles
+## 4. Los temas que más probablemente te preguntarán
 
-### ¿Por qué Django y Django REST Framework?
+### ¿Por qué Decimal?
 
-El enunciado prefiere Django. Su ORM, migraciones y restricciones cubren la
-persistencia; DRF aporta serializers, ViewSets, parsers y respuestas HTTP.
-La separación permite concentrar el código propio en las reglas del negocio.
+Los números float representan fracciones binarias y pueden introducir pequeñas diferencias. Decimal trabaja con representación decimal, apropiada para dinero. Los importes viajan como cadenas y se redondean al final con HALF_UP.
 
-### ¿Qué aporta un serializer?
+### ¿40 % de margen o de recargo?
 
-Valida el JSON recibido y convierte objetos a datos serializables. Aquí
-normaliza ISBN y país, protege los campos calculados y controla el guardado.
-No es una tabla ni un servicio de tasas.
+Es recargo sobre costo según el ejemplo: `15.99 × 0.85 × 1.4 = 19.03`. Un margen del 40 % sobre el precio de venta se calcularía dividiendo el costo entre 0.6 y daría otro resultado. Conservé `margin_percentage` por compatibilidad con el enunciado y documenté la interpretación.
 
-### ¿Por qué una capa de servicio?
+### ¿Por qué no consultar la tasa en cada request?
 
-La llamada HTTP al proveedor y el cálculo pueden probarse sin depender de
-la ruta. La vista coordina la petición y el servicio resuelve esa operación.
-No se añadió una capa genérica de repositorios sobre el ORM para este alcance.
+Porque el proveedor abierto publica una vez al día. Aumentar llamadas añade latencia y puntos de fallo sin dar más precisión temporal. Persistir permite compartir la misma tasa entre workers y sobrevivir reinicios. Las consultas a las 8 y 15 verifican disponibilidad; no crean dos publicaciones del proveedor.
 
-### ¿Qué impide una SQL injection?
+### ¿Por qué la última tasa conocida tiene límite?
 
-Las consultas del inventario utilizan filtros del ORM con parámetros.
-No se concatena entrada del usuario para construir SQL. El único SQL explícito
-es `SELECT 1` del readiness, sin entrada del usuario. Un ORM no protege una
-consulta SQL cruda escrita de forma insegura: hay que mantener la parametrización.
+Continuidad no significa aceptar valores viejos indefinidamente. Conservo la última cotización, la identifico como `last_known` cuando corresponde y devuelvo su edad. Al superar 48 horas respondo 503 sin reemplazar el precio. Ese umbral es una decisión configurable que acordaría con negocio.
 
-### ¿Por qué validar en la API y en la base?
+### ¿Qué pasa si todavía no hay ninguna tasa?
 
-La API puede explicar el error antes de escribir. Las restricciones de la
-base siguen protegiendo cuando hay solicitudes concurrentes o escrituras que
-no pasan por el serializer. No todos los validadores Python se vuelven SQL:
-el checksum ISBN se comprueba en la aplicación.
+Se permite un respaldo explícito de arranque, 0.85 para reproducir el ejemplo EUR. La respuesta marca `fallback` y advierte que no es una cotización actual. Se puede desactivar con `ALLOW_CONFIGURED_RATE_FALLBACK=false`. Después de existir una cotización guardada, un valor fijo no disimula su vencimiento.
 
-### ¿Django valida todo al llamar a save()?
+### ¿Por qué no usar Celery y Redis?
 
-No. `save()` no llama automáticamente a `full_clean()`. Los ejemplos de consola
-y `seed_demo` lo llaman explícitamente; la API valida mediante el serializer.
-Las restricciones SQL se aplican al guardar incluso sin `full_clean()`.
+Hay una tarea periódica pequeña. Un comando de Django separado, con estado y concesión en PostgreSQL, resuelve esa necesidad sin dos servicios adicionales. Si crecieran las tareas, las colas, la concurrencia y los reintentos complejos, evaluaría una cola especializada. No lancé hilos de fondo dentro de Gunicorn porque se duplicarían o terminarían al reiniciar workers.
 
-### ¿Qué valida el ISBN?
+### ¿Cómo evitas actualizadores duplicados?
 
-Quita espacios y guiones, admite ISBN-10 con X final e ISBN-13 con prefijo
-978/979 y verifica el dígito de control. La unicidad se aplica al valor normalizado.
-No consulta un catálogo para demostrar que el libro exista. Las representaciones
-ISBN-10 e ISBN-13 equivalentes no se convierten a una identidad común.
+Un estado por moneda se bloquea en transacción y asigna una concesión por 2 minutos. Otro proceso ve que está ocupada y no consulta. La red ocurre fuera de la transacción. Si un proceso muere, la concesión vence; si perdió la concesión, no reemplaza el resultado de otro proceso.
 
-### ¿Por qué Decimal y no float?
+### ¿Qué protegen los tokens y por qué no JWT?
 
-El costo y el precio requieren aritmética decimal y una regla explícita de
-redondeo. Float representa fracciones binarias y puede introducir diferencias.
-El modelo utiliza DecimalField; la respuesta mantiene los decimales como texto.
+El token identifica una sesión. Knox guarda su digest y permite revocarla borrando el registro. Para una API pequeña prefiero esa revocación inmediata y simple. JWT también sería válido, pero necesitaría decidir duración, revocación y rotación; no es obligatorio para un login REST.
 
-### ¿PUT y PATCH son lo mismo?
+### ¿Cómo distingues permisos?
 
-PUT exige los campos editables obligatorios del recurso. PATCH permite enviar
-solo los campos que cambian. Ambos validan y bloquean la fila mientras actualizan.
+Básico consulta; completo modifica libros y administra cuentas. La autorización se ejecuta en el backend. Un básico que llame manualmente a POST /books recibe 403 aunque se salte cualquier interfaz. Cambiar roles revoca tokens. No se aceptan `is_superuser` ni otros campos internos desde JSON.
 
-### ¿Por qué el precio es de solo lectura?
+### ¿No es demasiado poder para el rol completo?
 
-Se deriva del costo, de la tasa y del recargo. Permitir escribirlo libremente
-por el CRUD saltaría esa regla. El endpoint de cálculo es quien lo actualiza.
+Es una simplificación deliberada para dos niveles. Full permite también crear otros full y restablecer contraseñas ajenas; solo se asigna a personas de confianza. En un sistema más grande separaría operador de inventario y administrador de usuarios.
 
-### ¿Qué significa stock bajo?
+### ¿Qué diferencia hay entre 401, 403 y 429?
 
-`stock_quantity < threshold`; por defecto el umbral es 10. Stock igual a 10
-no aparece con ese umbral. Los umbrales negativos o no enteros devuelven 400.
+401: no hay una sesión válida. 403: la sesión es válida, pero el rol no tiene permiso. 429: se alcanzó un límite; normalmente se devuelve Retry-After. Los límites se comparten por base de datos entre workers, aunque no sustituyen un WAF.
 
-### ¿Qué distingue 400, 404, 500 y 503?
+### ¿Cómo evitas SQL injection?
 
-400: entrada inválida; 404: libro o ruta inexistente; 500: error inesperado;
-503: dependencia necesaria no disponible o imposibilidad de obtener un precio
-válido. Un fallo del proveedor con fallback válido se resuelve con 200 y aviso.
+Uso consultas parametrizadas del ORM, nunca concateno entradas para construir SQL. Además valido los datos de negocio. Validar un ISBN no es por sí mismo una defensa de SQL injection: son controles distintos.
 
-### ¿Qué hace transaction.atomic()?
+### ¿Por qué validar en serializer y base de datos?
 
-Agrupa la lectura bloqueada y la escritura del precio. Si el bloque falla,
-se revierten sus escrituras. La consulta externa queda fuera de la transacción.
+El serializer genera errores claros para el cliente. Las restricciones SQL también protegen ante carreras y otros escritores. Por ejemplo, dos POST simultáneos no pueden crear dos libros con el mismo ISBN porque la base impone UNIQUE; se traduce el conflicto esperado a 400.
 
-### ¿Esto ya está listo para un negocio real?
+### ¿Qué pasa si cambia el costo mientras calculas?
 
-Cumple el alcance funcional de la prueba y tiene controles de integridad y
-configuración de despliegue. Para un inventario real añadiría autenticación,
-roles, auditoría de movimientos, backups verificados, observabilidad, límites
-de solicitudes e historial de precios con tasa, moneda y origen.
+El servicio vuelve a leer el libro con `select_for_update` dentro de una transacción. Espera si otra actualización tiene la fila bloqueada y usa el costo confirmado. Los updates HTTP usan ese mismo bloqueo. La prueba con dos conexiones PostgreSQL comprueba que el cálculo usa el costo nuevo.
 
-### ¿Por qué no hay autenticación?
+### ¿Por qué no SQLite en producción?
 
-No forma parte del contrato de la prueba y se facilita la evaluación pública
-de todos los endpoints. El CRUD está abierto y debe contener solo datos de demo.
-Una versión operativa necesita permisos, especialmente en escrituras y precios.
-El admin de Django sí exige una cuenta de personal, que no se crea automáticamente.
+La prueba exige base gestionada y se utilizan bloqueos de fila de PostgreSQL. SQLite es práctico para aprender, pero no tiene las mismas garantías de concurrencia. La configuración rechaza SQLite en producción.
 
-### ¿Docker resuelve la base gestionada?
+### ¿Qué guardarías en auditoría?
 
-El contenedor de PostgreSQL de Compose sirve para desarrollar y verificar.
-La exigencia de base gestionada se cumple al desplegar con el PostgreSQL cloud
-configurado en `DATABASE_URL`. Un contenedor local no cumple esa parte del PDF.
+Actor, instante, tipo de operación, entidad e información necesaria sobre los cambios. Nunca contraseñas ni tokens. Una auditoría completa aún no está implementada; la priorizaría junto con backups probados, alertas y MFA administrativo.
 
-### ¿Qué pasa si el contenedor se reinicia?
+### ¿Qué hace Docker y qué hace Gunicorn?
 
-Compose conserva PostgreSQL en un volumen. En cloud la base vive fuera del
-contenedor de la aplicación. Los procesos de la API pueden reiniciarse sin
-que sus archivos locales sean la fuente de verdad del inventario.
+Docker empaqueta dependencias y ejecución. Compose coordina los tres servicios locales. Gunicorn sirve Django con workers; `runserver` es solo para desarrollo. La base tiene un volumen para persistir y la imagen ejecuta con usuario sin root.
 
-### ¿Qué hacen health y ready?
+## 5. Demo de 10 minutos
 
-`/health` comprueba que el proceso responde. `/ready` ejecuta una consulta
-mínima a la base y devuelve 503 si no puede conectarse. No comprueba el proveedor
-de tasas porque existe fallback. Las migraciones se aplican antes del arranque
-del servidor; readiness no compara por sí mismo todo el esquema.
+1. Abre README y `/docs`. Explica los tres procesos y la diferencia entre configuración preparada y nube verificada.
+2. Haz GET /books sin token: 401. Inicia sesión como completo y usa Authorize.
+3. Crea un libro con ISBN válido y consulta su ID. El precio comienza en null.
+4. Calcula el precio. Señala tasa, origen y antigüedad; compáralo con la fórmula.
+5. Modifica el costo y muestra que invalida el precio. Prueba stock bajo y filtro por categoría.
+6. Crea un usuario básico e inicia sesión con él. Consulta libros y demuestra un 403 al intentar crear.
+7. Vuelve al completo; cambia el rol o desactiva el básico. Su token previo debe recibir 401.
+8. Ejecuta Collection Runner: comprueba que las 38 peticiones pasan. Solo elimina su libro temporal y deja su usuario temporal inactivo.
+9. Muestra un test de tasa caída y otro de concurrencia. Finaliza con las limitaciones reales y las mejoras siguientes.
 
-### ¿Cómo probaste una caída del proveedor?
+Comandos seleccionados:
 
-Los tests simulan timeout, errores HTTP, JSON inválido y tasas inválidas.
-Así son repetibles y no consumen el proveedor. Postman complementa eso con
-un recorrido real HTTP y una consulta de tasa desde el entorno ejecutándose.
+```sh
+docker compose exec web python manage.py test accounts.tests
+docker compose exec web python manage.py test rates.tests.RateTests.test_provider_failure_preserves_last_known_rate_and_retries
+docker compose exec web python manage.py test books.test_concurrency
+```
 
-### ¿Qué cambiarías para escalar?
+Las pruebas simulan al proveedor y no dependen de su disponibilidad. PostgreSQL sí se usa de verdad para verificar los bloqueos.
 
-Medir primero. Cachear tasas según su vigencia, indexar consultas frecuentes
-si el volumen lo exige, añadir límites, controlar conexiones PostgreSQL y
-migraciones de release. Una tarea en segundo plano tendría sentido para
-recalcular miles de libros, no necesariamente para una petición individual.
+## 6. Cambios pequeños para practicar
 
-### ¿Qué limitaciones reconoces?
+| Petición del entrevistador | Dónde empezar | Qué recordar |
+| --- | --- | --- |
+| Cambiar recargo a 35 % | `books/services.py` | Cambiar constante y resultados de tests del cálculo. |
+| Añadir filtro por autor | `books/views.py`, serializer de consulta | Validar longitud y mantener paginación/permisos. |
+| Hacer usuario operador sin administrar cuentas | `accounts/models.py` y permisos | Migración de choices, matriz de permisos y tests negativos. |
+| Cambiar horarios de actualización | `config/settings.py` | Zona horaria explícita y tests de cambio de día. |
+| No aceptar respaldo fijo | Variable de entorno | Sin historial devuelve 503 hasta sincronizar. |
+| Añadir campo a Book | Modelo, migración, serializer | Compatibilidad con registros existentes y documentación. |
 
-Una moneda global y dos decimales; sin historial de tasas ni cache; stock
-como cantidad absoluta, sin movimientos ni reservas; CRUD público para demo;
-concurrencia controlada en la API, no en cualquier script que escriba con el ORM.
-El formulario admin invalida el precio al cambiar el costo, pero no utiliza el
-mismo protocolo de bloqueo de la API. Antes de uso operativo unificaría esas rutas.
+## 7. Plan de estudio breve
 
-## 11. Si piden un cambio durante la defensa
+- 20 minutos: ejecutar login/CRUD desde Swagger y distinguir 400, 401, 403, 404 y 503.
+- 25 minutos: seguir POST /books desde rutas hasta serializer, modelo y SQL.
+- 20 minutos: seguir el cálculo y explicar el recargo, Decimal y bloqueo de fila.
+- 20 minutos: seguir login, autorización y revocación de tokens.
+- 15 minutos: simular fallo de tasas con tests y explicar el worker separado.
+- 20 minutos: practicar la demo y hacer un cambio pequeño tú mismo.
 
-| Petición | Punto de entrada |
-| --- | --- |
-| Cambiar el recargo a 30 % | `MARGIN_PERCENTAGE` en `books/services.py`, ajustar pruebas esperadas. |
-| Mostrar stock menor o igual | Cambiar `stock_quantity__lt` a `stock_quantity__lte` y el test de frontera. |
-| Añadir un campo editorial | Modelo → migración → serializer → tests → Postman. |
-| Cambiar la moneda | Configuración y respaldo; planificar recálculo de precios existentes. |
-| Añadir búsqueda por autor | Nueva consulta validada en una acción o filtro. |
-| Exigir autenticación | Configurar autenticación y permisos en DRF; actualizar Postman. |
-
-Explica primero el impacto y luego modifica. Para campos persistidos, recuerda
-la migración; para cambios de contrato, actualiza pruebas y ejemplos.
-
-## 12. Preparación en 60–90 minutos
-
-1. **15 minutos:** lee `models.py`, `serializers.py` y `views.py`; sigue un POST.
-2. **15 minutos:** recorre `services.py` y calcula el ejemplo en papel.
-3. **15 minutos:** ejecuta Postman; explica cada estado HTTP en voz alta.
-4. **15 minutos:** ejecuta los tests de fallback y concurrencia; localiza los mocks.
-5. **15–30 minutos:** ensaya el resumen y responde las preguntas sin leer.
-
-Si te preguntan por herramientas de IA, describe con precisión cómo se generó
-el proyecto, qué revisaste tú y qué puedes demostrar. Esta guía sirve para
-aprender y explicar el código entregado; adapta las respuestas a tu experiencia real.
-
-## 13. Referencias para repasar
-
-- [Modelos Django](https://docs.djangoproject.com/en/5.2/topics/db/models/)
-- [Migraciones](https://docs.djangoproject.com/en/5.2/topics/migrations/)
-- [Validación de modelos](https://docs.djangoproject.com/en/5.2/ref/models/instances/#validating-objects)
-- [Serializers DRF](https://www.django-rest-framework.org/api-guide/serializers/)
-- [ViewSets DRF](https://www.django-rest-framework.org/api-guide/viewsets/)
-- [Transacciones Django](https://docs.djangoproject.com/en/5.2/topics/db/transactions/)
-- [Proveedor de tasas](https://www.exchangerate-api.com/)
+No memorices una lista de herramientas. Debes poder responder: qué problema resuelve cada decisión, qué falla si la quitas y qué limitación queda.

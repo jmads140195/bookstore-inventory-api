@@ -1,3 +1,5 @@
+from django.contrib.auth import get_user_model
+from accounts.models import UserAccess
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -20,6 +22,9 @@ def book_data(**changes):
 @override_settings(LOCAL_CURRENCY="EUR", DEFAULT_EXCHANGE_RATE="0.85")
 class BookAPITests(APITestCase):
     def setUp(self):
+        user = get_user_model().objects.create_user(username="booktester")
+        UserAccess.objects.create(user=user, role="full")
+        self.client.force_authenticate(user)
         data = book_data(isbn="9788437604947")
         self.book = Book.objects.create(**data)
 
@@ -118,7 +123,7 @@ class BookAPITests(APITestCase):
         for value in ["-1", "abc", "1.5", "2147483648"]:
             self.assertEqual(self.client.get("/books/low-stock", {"threshold": value}).status_code, 400)
 
-    @patch("books.services.get_exchange_rate", return_value=ExchangeRate(Decimal("0.85"), "api"))
+    @patch("books.services.get_exchange_rate", return_value=ExchangeRate(Decimal("0.85"), "stored"))
     def test_price_matches_pdf_and_is_persisted(self, rate):
         response = self.client.post(f"/books/{self.book.pk}/calculate-price")
         self.assertEqual(response.status_code, 200, response.data)
@@ -129,7 +134,7 @@ class BookAPITests(APITestCase):
         self.book.refresh_from_db()
         self.assertEqual(self.book.selling_price_local, Decimal("19.03"))
 
-    @patch("books.services.get_exchange_rate", return_value=ExchangeRate(Decimal("0.45"), "api"))
+    @patch("books.services.get_exchange_rate", return_value=ExchangeRate(Decimal("0.45"), "stored"))
     def test_calculation_does_not_round_cost_before_applying_markup(self, rate):
         self.book.cost_usd = Decimal("0.01")
         self.book.save()
@@ -137,16 +142,17 @@ class BookAPITests(APITestCase):
         self.assertEqual(response.data["cost_local"], "0.00")
         self.assertEqual(response.data["selling_price_local"], "0.01")
 
-    @patch("books.services.requests.get", side_effect=requests.Timeout)
-    def test_provider_timeout_uses_fallback(self, request):
+    @patch("rates.services.requests.get", side_effect=requests.Timeout)
+    def test_missing_history_uses_fallback_without_network(self, request):
         response = self.client.post(f"/books/{self.book.pk}/calculate-price")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["rate_source"], "fallback")
         self.assertTrue(response.data["used_fallback"])
         self.assertIsNotNone(response.data["warning"])
+        request.assert_not_called()
 
     @override_settings(DEFAULT_EXCHANGE_RATE="")
-    @patch("books.services.requests.get", side_effect=requests.ConnectionError)
+    @patch("rates.services.requests.get", side_effect=requests.ConnectionError)
     def test_no_usable_rate_returns_503_without_changing_price(self, request):
         self.book.selling_price_local = Decimal("12.00")
         self.book.save()
@@ -161,16 +167,16 @@ class BookAPITests(APITestCase):
         rate.assert_not_called()
 
     @patch("books.services.get_exchange_rate")
-    def test_cost_is_reread_after_external_request(self, rate):
+    def test_cost_is_reread_after_loading_rate(self, rate):
         def fetch():
             Book.objects.filter(pk=self.book.pk).update(cost_usd=Decimal("20.00"))
-            return ExchangeRate(Decimal("0.85"), "api")
+            return ExchangeRate(Decimal("0.85"), "stored")
         rate.side_effect = fetch
         response = self.client.post(f"/books/{self.book.pk}/calculate-price")
         self.assertEqual(response.data["cost_usd"], "20.00")
         self.assertEqual(response.data["selling_price_local"], "23.80")
 
-    @patch("books.services.get_exchange_rate", return_value=ExchangeRate(Decimal("1e12"), "api"))
+    @patch("books.services.get_exchange_rate", return_value=ExchangeRate(Decimal("1e12"), "stored"))
     def test_price_overflow_returns_503_without_saving(self, rate):
         self.book.cost_usd = Decimal("9999999999.99")
         self.book.save()

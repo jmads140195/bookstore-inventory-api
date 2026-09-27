@@ -1,76 +1,36 @@
-# Validación de la entrega
+# Validación de la versión 2
 
-Fecha: 27 de septiembre de 2026. Estas verificaciones corresponden al entorno
-local; no constituyen una prueba de despliegue cloud.
+Comprobaciones ejecutadas el 27 de septiembre de 2026.
 
-| Comprobación | Resultado observado |
+| Comprobación | Resultado |
 | --- | --- |
-| Django tests en SQLite | 36 tests descubiertos; 35 pasaron y 1 se omitió porque necesita bloqueo real de filas. |
-| Django tests en PostgreSQL 16 dentro de Docker | 36 tests pasaron, incluida concurrencia con dos conexiones. |
-| Postman con Newman contra Gunicorn + PostgreSQL | 17 peticiones y 33 aserciones, cero fallos. |
-| OpenAPI | Generación y validación sin errores ni advertencias. |
-| Migraciones | Aplicadas; `makemigrations --check --dry-run` no detecta cambios pendientes. |
-| Configuración de producción | `check --deploy --fail-level WARNING` no reporta incidencias con variables de producción de prueba. |
-| Docker Compose | Imagen construida; aplicación y PostgreSQL en estado healthy. |
-| Cobertura local de líneas | 87 % al excluir tests, migraciones y puntos ASGI/WSGI; no es cobertura de ramas ni de todos los entornos. |
+| Suite Django con PostgreSQL 16 en Docker | 61 tests aprobados, sin omisiones. |
+| Suite Django con SQLite local | 60 aprobados; 1 test de bloqueo de fila omitido por requerir PostgreSQL. |
+| Postman mediante Newman, API Docker local | 38 peticiones y 57 aserciones; 0 fallos. |
+| Esquema OpenAPI | Validado con `--validate --fail-on-warn`, sin advertencias. |
+| Migraciones | `makemigrations --check --dry-run`: sin cambios pendientes. |
+| Configuración de producción | `check --deploy`: sin incidencias, también con la configuración del túnel. |
+| Cabeceras de respuestas privadas | Test específico aprobado tras añadir `Cache-Control: no-store`. |
+| Cobertura previa al middleware de cabeceras | 88 % de líneas; excluye tests, migraciones, ASGI y WSGI. |
+| Docker | Imagen construida; PostgreSQL/API saludables y worker de tasas ejecutándose. |
+| URL pública / Cloudflare | Pendiente de conexión del túnel y prueba externa. |
+| PostgreSQL gestionado cloud | Pendiente: el túnel utiliza PostgreSQL local. |
 
-## Integración externa real
+## Qué verifican los tests
 
-Durante el recorrido de Postman, la API consultó al proveedor y obtuvo:
+- CRUD, paginación, filtros, validación de país/ISBN/costo/stock y duplicados.
+- Recargo del ejemplo, redondeo final, persistencia e invalidación por cambio de costo.
+- Cálculo concurrente con actualización de costo usando dos conexiones PostgreSQL.
+- Login real, digest del token, caducidad, logout, logout-all y máximo de sesiones.
+- Básico frente a completo; intentos de escalada mediante campos internos rechazados.
+- Revocación por cambios de rol, desactivación y cambios/restablecimientos de contraseña.
+- Límites por usuario/IP, respuesta Retry-After y rechazo de cuerpos JSON excesivos.
+- Lectura de tasas sin llamadas HTTP; conservación de la anterior ante timeout/respuestas inválidas.
+- Caducidad según fecha del proveedor, concesión ocupada, reintento y horarios de Caracas.
+- Errores internos sanitizados, readiness y configuración de producción.
 
-```json
-{
-  "book_id": 2,
-  "cost_usd": "15.99",
-  "exchange_rate": "0.878",
-  "cost_local": "14.04",
-  "margin_percentage": 40,
-  "selling_price_local": "19.65",
-  "currency": "EUR",
-  "calculation_timestamp": "2026-09-27T14:21:41.371900Z",
-  "rate_source": "api",
-  "used_fallback": false,
-  "warning": null
-}
-```
+Postman inicia sesión y comprueba tanto éxitos como rechazos 400, 401, 403 y 404. Crea su propio libro y usuario: elimina el libro y desactiva el usuario al finalizar. Las pruebas Django usan una base de test separada.
 
-El libro creado por la colección se eliminó al finalizar. La cotización es la
-observada durante esta ejecución, no un valor fijo esperado en futuras pruebas.
+La suite de tasas usa mocks: es reproducible y no depende del proveedor. Los logs de prueba incluyen errores esperados para comprobar el manejo de 4xx/5xx; el resultado final determina si una prueba pasó. El chequeo de Django no verifica DNS, disponibilidad pública, configuración de Cloudflare ni cumplimiento de base gestionada.
 
-## Casos automatizados
-
-- Crear, listar, paginar, consultar, PUT, PATCH y eliminar.
-- ISBN con guiones/espacios, checksum inválido, ISBN-10 con X y duplicados.
-- Costos inválidos, stock negativo/fraccionario, país desconocido y campos extra.
-- Filtros de categoría y frontera estricta del stock bajo.
-- Ejemplo exacto del PDF, redondeo final, persistencia e invalidación del precio.
-- Timeout, error HTTP, JSON inválido, tasas no finitas y respaldo ausente/inválido.
-- 404 sin llamar al proveedor y 500/503 sin filtrar detalles internos al cliente.
-- Relectura del costo después de la llamada externa y bloqueo concurrente en PostgreSQL.
-- Readiness ante fallo de base de datos.
-- Rechazo de debug, clave débil, SQLite, URL vacía y host comodín en producción.
-
-Los tests de fallos provocan mensajes 400/500/503 y trazas controladas en los
-logs. Son escenarios simulados; el resumen final indica si la prueba pasó.
-
-## Reproducir
-
-```sh
-docker compose up --build -d
-docker compose exec web python manage.py test
-docker compose exec web python manage.py makemigrations --check --dry-run
-docker compose exec web python manage.py spectacular --file /tmp/schema.yml --validate --fail-on-warn
-npx newman run postman/bookstore.postman_collection.json -e postman/local.postman_environment.json
-```
-
-Para repetir el cálculo exacto del ejemplo, usa el test con la tasa simulada
-0.85. La colección real puede obtener una tasa distinta.
-
-## Pendiente de verificar externamente
-
-- Provisionar PostgreSQL gestionado y publicar la API.
-- Configurar el entorno Postman de producción con la URL asignada.
-- Ejecutar la colección contra esa URL pública y registrar el resultado.
-
-La configuración cloud está preparada en `render.yaml`; consulta `DESPLIEGUE.md`.
-No se ha modificado el dominio ni el VPS de ninguna aplicación existente.
+Los informes Newman detallados se conservaron fuera del repositorio porque pueden contener credenciales o tokens. Este documento solo publica el resumen. GitHub Actions vuelve a ejecutar la suite, el contrato y la construcción para cada commit publicado.

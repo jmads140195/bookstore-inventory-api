@@ -17,7 +17,7 @@ services:
     build: .
     ports:
       - "127.0.0.1:${API_PORT:-8080}:8000"
-    environment:
+    environment: &app-environment
       DJANGO_ENV: development
       DJANGO_DEBUG: "false"
       DJANGO_SECRET_KEY: django-insecure-local-docker-demo-only
@@ -29,6 +29,18 @@ services:
       RUN_MIGRATIONS: "1"
     depends_on:
       db:
+        condition: service_healthy
+  rate-worker:
+    build: .
+    command: ["python", "manage.py", "run_rate_scheduler"]
+    environment:
+      <<: *app-environment
+      RUN_MIGRATIONS: "0"
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+    depends_on:
+      web:
         condition: service_healthy
 volumes:
   postgres_data:

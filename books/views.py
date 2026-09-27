@@ -4,6 +4,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from accounts.permissions import InventoryAccess
 
 from .models import Book
 from .serializers import BookSerializer, CategoryQuerySerializer, PriceCalculationSerializer, StockQuerySerializer
@@ -11,6 +12,7 @@ from .services import calculate_book_price
 
 
 class BookViewSet(viewsets.ModelViewSet):
+    permission_classes = [InventoryAccess]
     queryset = Book.objects.all()
     serializer_class = BookSerializer
     lookup_value_regex = "[0-9]+"

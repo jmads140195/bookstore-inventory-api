@@ -1,0 +1,20 @@
+# Uso: docker compose --env-file RUTA_ENV_PRIVADO -f docker-compose.yml -f docker-compose.tunnel.yml up -d
+# La base sigue siendo PostgreSQL local: esto no la convierte en un servicio cloud gestionado.
+services:
+  web:
+    environment: &tunnel-environment
+      DJANGO_ENV: production
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${TUNNEL_DJANGO_SECRET_KEY:?Configura una clave privada de al menos 50 caracteres}
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,pruebanextep.dateoapp.com
+      SECURE_SSL_REDIRECT: "true"
+      TRUST_PROXY_HEADERS: "true"
+      CSRF_TRUSTED_ORIGINS: https://pruebanextep.dateoapp.com
+      AUTH_TRUSTED_PROXY_COUNT: "0"
+    restart: unless-stopped
+  rate-worker:
+    environment:
+      <<: *tunnel-environment
+    restart: unless-stopped
+  db:
+    restart: unless-stopped

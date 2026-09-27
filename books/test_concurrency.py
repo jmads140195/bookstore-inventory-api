@@ -19,7 +19,7 @@ class PriceConcurrencyTests(TransactionTestCase):
 
         def fetch():
             rate_fetched.set()
-            return ExchangeRate(Decimal("0.85"), "api")
+            return ExchangeRate(Decimal("0.85"), "stored")
 
         def calculate():
             close_old_connections()

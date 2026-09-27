@@ -74,7 +74,9 @@ class PriceCalculationSerializer(serializers.Serializer):
     selling_price_local = serializers.DecimalField(max_digits=18, decimal_places=2)
     currency = serializers.CharField()
     calculation_timestamp = serializers.DateTimeField()
-    rate_source = serializers.ChoiceField(choices=["api", "fallback"])
+    rate_source = serializers.ChoiceField(choices=["stored", "last_known", "fallback"])
+    provider_updated_at = serializers.DateTimeField(allow_null=True)
+    rate_age_seconds = serializers.IntegerField(allow_null=True)
     used_fallback = serializers.BooleanField()
     warning = serializers.CharField(allow_null=True)
 

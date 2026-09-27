@@ -2,7 +2,7 @@
   "info": {
     "name": "Nextep - Bookstore Inventory API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Ejecutar en orden. Crea un ISBN de prueba y elimina únicamente ese libro al finalizar. Seleccionar entorno Local o Producción. Producción está pendiente hasta configurar una URL real con scripts/configure_postman.py."
+    "description": "Ejecutar en orden. Requiere admin_username y admin_password privados en el entorno. Crea y elimina su libro; crea un usuario temporal y lo desactiva al terminar. Verifica autenticación, permisos y revocación. No exportar contraseñas ni tokens. Seleccionar entorno Local o Producción. Producción está pendiente hasta configurar una URL real con scripts/configure_postman.py."
   },
   "variable": [
     {
@@ -34,9 +34,98 @@
       }
     }
   ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
   "item": [
     {
-      "name": "01 Salud",
+      "name": "01 Login completo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{admin_username}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Rol completo\", () => pm.expect(pm.response.json().user.role).to.eql(\"full\"));",
+              "if (pm.response.code === 200) pm.environment.set(\"token\", pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Mi cuenta",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Sin token no hay acceso",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/books",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Salud",
       "request": {
         "method": "GET",
         "header": [],
@@ -56,7 +145,7 @@
       ]
     },
     {
-      "name": "02 Base de datos",
+      "name": "05 Base de datos",
       "request": {
         "method": "GET",
         "header": [],
@@ -76,7 +165,7 @@
       ]
     },
     {
-      "name": "03 Crear libro",
+      "name": "06 Crear libro",
       "request": {
         "method": "POST",
         "header": [
@@ -122,7 +211,7 @@
       ]
     },
     {
-      "name": "04 Listar libros",
+      "name": "07 Listar libros",
       "request": {
         "method": "GET",
         "header": [],
@@ -142,7 +231,7 @@
       ]
     },
     {
-      "name": "05 Consultar libro",
+      "name": "08 Consultar libro",
       "request": {
         "method": "GET",
         "header": [],
@@ -162,7 +251,7 @@
       ]
     },
     {
-      "name": "06 Rechazar ISBN duplicado",
+      "name": "09 Rechazar ISBN duplicado",
       "request": {
         "method": "POST",
         "header": [
@@ -196,7 +285,7 @@
       ]
     },
     {
-      "name": "07 Rechazar costo cero",
+      "name": "10 Rechazar costo cero",
       "request": {
         "method": "POST",
         "header": [
@@ -230,7 +319,7 @@
       ]
     },
     {
-      "name": "08 Rechazar checksum ISBN",
+      "name": "11 Rechazar checksum ISBN",
       "request": {
         "method": "POST",
         "header": [
@@ -264,7 +353,7 @@
       ]
     },
     {
-      "name": "09 Calcular precio",
+      "name": "12 Calcular precio",
       "request": {
         "method": "POST",
         "header": [],
@@ -280,7 +369,7 @@
               "const calculation = pm.response.json();",
               "pm.test(\"Recargo 40%\", () => pm.expect(calculation.margin_percentage).to.eql(40));",
               "pm.test(\"Precio positivo\", () => pm.expect(Number(calculation.selling_price_local)).to.be.above(0));",
-              "pm.test(\"Origen de la tasa\", () => pm.expect([\"api\", \"fallback\"]).to.include(calculation.rate_source));",
+              "pm.test(\"Origen de la tasa\", () => pm.expect([\"stored\", \"last_known\", \"fallback\"]).to.include(calculation.rate_source));",
               "pm.collectionVariables.set(\"calculated_price\", calculation.selling_price_local);"
             ]
           }
@@ -288,7 +377,7 @@
       ]
     },
     {
-      "name": "10 Comprobar precio guardado",
+      "name": "13 Comprobar precio guardado",
       "request": {
         "method": "GET",
         "header": [],
@@ -308,7 +397,7 @@
       ]
     },
     {
-      "name": "11 Actualizar libro PUT",
+      "name": "14 Actualizar libro PUT",
       "request": {
         "method": "PUT",
         "header": [
@@ -342,7 +431,7 @@
       ]
     },
     {
-      "name": "12 Actualizar stock PATCH",
+      "name": "15 Actualizar stock PATCH",
       "request": {
         "method": "PATCH",
         "header": [
@@ -376,7 +465,7 @@
       ]
     },
     {
-      "name": "13 Buscar categoría",
+      "name": "16 Buscar categoría",
       "request": {
         "method": "GET",
         "header": [],
@@ -396,7 +485,7 @@
       ]
     },
     {
-      "name": "14 Consultar stock bajo",
+      "name": "17 Consultar stock bajo",
       "request": {
         "method": "GET",
         "header": [],
@@ -416,7 +505,7 @@
       ]
     },
     {
-      "name": "15 Rechazar umbral inválido",
+      "name": "18 Rechazar umbral inválido",
       "request": {
         "method": "GET",
         "header": [],
@@ -435,7 +524,7 @@
       ]
     },
     {
-      "name": "16 Eliminar libro de prueba",
+      "name": "19 Eliminar libro de prueba",
       "request": {
         "method": "DELETE",
         "header": [],
@@ -454,7 +543,7 @@
       ]
     },
     {
-      "name": "17 Comprobar eliminación",
+      "name": "20 Comprobar eliminación",
       "request": {
         "method": "GET",
         "header": [],
@@ -467,6 +556,582 @@
             "type": "text/javascript",
             "exec": [
               "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 Consultar tasa persistida",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/rates/current"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 Listar usuarios",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/users"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 Crear usuario básico",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/users",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{demo_username}}\",\n  \"password\": \"{{demo_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "if (pm.response.code === 201) pm.collectionVariables.set(\"user_id\", pm.response.json().id);",
+              "pm.test(\"Básico por defecto\", () => pm.expect(pm.response.json().role).to.eql(\"basic\"));"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.variables.set(\"demo_username\", \"postman_\" + Date.now());",
+              "pm.variables.set(\"demo_password\", \"Demo!\" + pm.variables.replaceIn(\"{{$guid}}\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24 Login básico",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{demo_username}}\",\n  \"password\": \"{{demo_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "if (pm.response.code === 200) pm.environment.set(\"basic_token\", pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25 Básico puede leer",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/books",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{basic_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26 Básico no puede crear libros",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/books",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Libro de prueba Postman\",\n  \"author\": \"Evaluación Nextep\",\n  \"isbn\": \"{{demo_isbn}}\",\n  \"cost_usd\": \"15.99\",\n  \"stock_quantity\": 25,\n  \"category\": \"Novela\",\n  \"supplier_country\": \"ES\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{basic_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27 Básico no puede listar usuarios",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/users",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{basic_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28 Promover usuario",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/users/{{user_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"role\": \"full\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Nuevo rol\", () => pm.expect(pm.response.json().role).to.eql(\"full\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "29 Cambio de rol revoca token previo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/auth/me",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{basic_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "30 Devolver permiso básico",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/users/{{user_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"role\": \"basic\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "31 Restablecer contraseña del usuario",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/users/{{user_id}}/reset-password",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"new_password\": \"{{new_demo_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.variables.set(\"new_demo_password\", \"Demo!\" + pm.variables.replaceIn(\"{{$guid}}\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "32 Login con nueva contraseña",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{demo_username}}\",\n  \"password\": \"{{new_demo_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "if (pm.response.code === 200) pm.environment.set(\"basic_token\", pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33 Cambiar contraseña propia",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/auth/change-password",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"current_password\": \"{{new_demo_password}}\",\n  \"new_password\": \"{{demo_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{basic_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "34 Cambio de contraseña revoca sesión",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/auth/me",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{basic_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "35 Desactivar usuario de prueba",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/users/{{user_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"is_active\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "36 Usuario desactivado no puede entrar",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{demo_username}}\",\n  \"password\": \"{{demo_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "37 Cerrar sesión completa",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{base_url}}/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "38 Token cerrado ya no funciona",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+              "pm.environment.unset(\"token\"); pm.environment.unset(\"basic_token\");"
             ]
           }
         }

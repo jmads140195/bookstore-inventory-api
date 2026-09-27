@@ -13,6 +13,8 @@ urlpatterns = [
     path("schema", SpectacularAPIView.as_view(), name="schema"),
     path("docs", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
     path("", include("books.urls")),
+    path("", include("accounts.urls")),
+    path("", include("rates.urls")),
 ]
 handler404 = "config.exceptions.not_found"
 handler500 = "config.exceptions.server_error"

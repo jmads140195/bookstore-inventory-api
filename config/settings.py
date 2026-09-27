@@ -1,5 +1,6 @@
 """Configuración local y de producción mediante variables de entorno."""
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
@@ -47,11 +48,13 @@ else:
 
 INSTALLED_APPS = [
     "books.apps.BooksConfig", "rest_framework", "drf_spectacular",
+    "accounts.apps.AccountsConfig", "rates.apps.RatesConfig", "knox",
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.middleware.PrivateAPIResponses",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -67,7 +70,7 @@ TEMPLATES = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "DIR
 WSGI_APPLICATION = "config.wsgi.application"
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
@@ -96,13 +99,26 @@ LOCAL_CURRENCY = os.getenv("LOCAL_CURRENCY", "EUR").upper()
 if not pycountry.currencies.get(alpha_3=LOCAL_CURRENCY):
     raise ImproperlyConfigured("LOCAL_CURRENCY debe ser un código ISO 4217 válido.")
 DEFAULT_EXCHANGE_RATE = os.getenv("DEFAULT_EXCHANGE_RATE", "0.85" if LOCAL_CURRENCY == "EUR" else "")
-EXCHANGE_RATE_API_URL = "https://api.exchangerate-api.com/v4/latest/USD"
+EXCHANGE_RATE_API_URL = "https://open.er-api.com/v6/latest/USD"
 EXCHANGE_RATE_TIMEOUT = (3.05, 5)
+RATE_MAX_AGE_HOURS = int(os.getenv("RATE_MAX_AGE_HOURS", "48"))
+RATE_SCHEDULE_TIMEZONE = "America/Caracas"
+RATE_SCHEDULE_HOURS = (8, 15)
+ALLOW_CONFIGURED_RATE_FALLBACK = env_bool("ALLOW_CONFIGURED_RATE_FALLBACK", True)
+API_MAX_JSON_BYTES = 65_536
+API_USER_LIMIT = 120
+LOGIN_IP_LIMIT = 30
+LOGIN_USER_LIMIT = 10
+# Solo configurar si el proxy elimina/reconstruye X-Forwarded-For.
+AUTH_TRUSTED_PROXY_COUNT = int(os.getenv("AUTH_TRUSTED_PROXY_COUNT", "0"))
+AUTH_MAX_TOKENS = 5
+REST_KNOX = {"TOKEN_TTL": timedelta(hours=8), "AUTH_HEADER_PREFIX": "Bearer", "AUTO_REFRESH": False}
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["knox.auth.TokenAuthentication"],
+    "DEFAULT_THROTTLE_CLASSES": ["accounts.throttles.UserThrottle"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "DEFAULT_PARSER_CLASSES": ["config.parsers.BoundedJSONParser"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
@@ -110,9 +126,10 @@ REST_FRAMEWORK = {
     "COERCE_DECIMAL_TO_STRING": True,
 }
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Bookstore Inventory API", "VERSION": "1.0.0",
+    "TITLE": "Bookstore Inventory API", "VERSION": "2.0.0",
     "DESCRIPTION": "Inventario y precios sugeridos. Importes decimales expresados como cadenas. Tasas: https://www.exchangerate-api.com",
     "SERVE_INCLUDE_SCHEMA": False, "COMPONENT_SPLIT_REQUEST": True,
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
 }
 LOGGING = {"version": 1, "disable_existing_loggers": False,
            "handlers": {"console": {"class": "logging.StreamHandler"}},
