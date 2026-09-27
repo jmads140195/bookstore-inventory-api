@@ -14,7 +14,7 @@ Comprobaciones ejecutadas el 27 de septiembre de 2026.
 | Cobertura previa al middleware de cabeceras | 88 % de líneas; excluye tests, migraciones, ASGI y WSGI. |
 | Docker | Imagen construida; PostgreSQL/API saludables y worker de tasas ejecutándose. |
 | URL pública / Cloudflare | HTTPS /ready y /docs correctos; /books sin token devuelve 401; Postman público: 38 peticiones, 57 aserciones, 0 fallos. |
-| PostgreSQL gestionado cloud | Pendiente: el túnel utiliza PostgreSQL local. |
+| Modalidad de alojamiento | Demo autoalojada por decisión de alcance y costes: API y PostgreSQL en el equipo del candidato. Difiere de los puntos 4 y 5 del enunciado; ver [nota de entrega](NOTA-DE-ENTREGA.md). |
 
 ## Qué verifican los tests
 
@@ -44,4 +44,4 @@ Los informes Newman detallados se conservaron fuera del repositorio porque puede
 - En el primer test público se sustituyó únicamente la resolución DNS del proceso por una IP del hostname verificada mediante DoH, debido a una caché negativa del resolver local. Se mantuvieron hostname, SNI y verificación de certificado HTTPS. No se accedió directamente al origen para ese recorrido.
 - Cabeceras públicas comprobadas: HSTS, no-store en API, nosniff y DENY para frames.
 
-La disponibilidad futura depende de esta PC y conexión. El resultado público comprueba el túnel y la aplicación; el requisito de PostgreSQL gestionado cloud sigue pendiente.
+La disponibilidad futura depende de esta PC y conexión. El resultado público comprueba el túnel y la aplicación. No acredita alojamiento de la API en un proveedor cloud ni una base gestionada: ambos procesos se ejecutan en el equipo del candidato, conforme a la modalidad declarada para esta demo.

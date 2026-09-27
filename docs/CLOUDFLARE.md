@@ -48,7 +48,7 @@ En el modo público, Django exige HTTPS; el HTTP local de 14559 puede redirigir 
 
 La PC, Docker Desktop, PostgreSQL y el túnel deben estar activos. Cerrar el proceso del túnel, suspender la PC o perder internet deja de servir la API. El worker de tasas debe continuar activo, aunque nadie visite la web.
 
-PostgreSQL sigue corriendo en esta PC. Cloudflare publica el acceso; no transforma la base local en una base gestionada cloud. Ver DESPLIEGUE.md para cerrar ese requisito del PDF.
+La API y PostgreSQL se ejecutan en esta PC. Esta modalidad se eligió para la evaluación utilizando infraestructura propia, sin contratar recursos cloud adicionales. Cloudflare proporciona el acceso público. La [nota de entrega](NOTA-DE-ENTREGA.md) documenta la diferencia respecto al alojamiento cloud y a la base gestionada solicitados en los puntos 4 y 5 del enunciado.
 
 [Guía oficial de túnel local](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/local-management/create-local-tunnel/) · [Descargas oficiales](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/)
 

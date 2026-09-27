@@ -10,9 +10,9 @@ Para retomar Python y Django desde conocimientos de arquitectura. Léela con Swa
 >
 > Agregué login con tokens revocables y dos roles: básico consulta; completo modifica el inventario y administra usuarios. Las sesiones vencen y se revocan al cambiar contraseña o permisos. Hay límites de peticiones y validación explícita de campos.
 >
-> Docker ejecuta la API, PostgreSQL y el actualizador. Incluí tests, Postman y documentación OpenAPI. La API está publicada y verificada mediante Cloudflare Tunnel desde mi PC. PostgreSQL sigue siendo local; migrarlo a una base gestionada cloud es el requisito externo pendiente.
+> Docker ejecuta la API, PostgreSQL y el actualizador. Incluí tests, Postman y documentación OpenAPI. Para la evaluación elegí una demo autoalojada con acceso HTTPS mediante Cloudflare Tunnel, aprovechando mi infraestructura y evitando contratar recursos cloud adicionales. La API y PostgreSQL se ejecutan en mi equipo. Dejé documentado que esta modalidad difiere de los puntos de alojamiento cloud y base gestionada del enunciado.
 
-Distingue publicación HTTPS de alojamiento cloud gestionado. Cloudflare permite acceder a esta PC; no mueve PostgreSQL a la nube.
+Distingue publicación HTTPS de alojamiento cloud gestionado. Cloudflare permite acceder a esta PC; la API y PostgreSQL siguen ejecutándose en ella. La [nota de entrega](NOTA-DE-ENTREGA.md) documenta la decisión y sus limitaciones.
 
 ## 2. Recorrido de una petición
 
@@ -123,7 +123,19 @@ El servicio vuelve a leer el libro con `select_for_update` dentro de una transac
 
 ### ¿Por qué no SQLite en producción?
 
-La prueba exige base gestionada y se utilizan bloqueos de fila de PostgreSQL. SQLite es práctico para aprender, pero no tiene las mismas garantías de concurrencia. La configuración rechaza SQLite en producción.
+La solución utiliza bloqueos de fila de PostgreSQL para los cálculos y actualizaciones concurrentes. SQLite es práctico para aprender, pero no tiene las mismas garantías de concurrencia. La configuración rechaza SQLite en producción. La elección del motor y la ubicación de la base son decisiones distintas: esta demo utiliza PostgreSQL en Docker local, y por ello no satisface el apartado de base gestionada cloud.
+
+### ¿Por qué alojaste la demo en tu equipo?
+
+Para una evaluación temporal decidí utilizar la infraestructura que ya tenía disponible y evitar contratar recursos cloud adicionales o asumir cargos por consumo. Docker permite reproducir la ejecución y Cloudflare Tunnel ofrece acceso HTTPS público para probarla desde Swagger o Postman. La contrapartida es que la disponibilidad depende de mi equipo y conexión. Lo dejé expresamente documentado porque el enunciado pide otro tipo de alojamiento.
+
+### ¿Cloudflare Tunnel cumple el requisito de despliegue cloud?
+
+Proporciona acceso público a los servicios del equipo. En esta entrega no se trasladaron los procesos de la API ni PostgreSQL a un proveedor cloud. La modalidad elegida difiere de los puntos 4 y 5; su aceptación queda a criterio del evaluador. La URL pública y las pruebas de Postman demuestran el acceso remoto y el comportamiento funcional.
+
+### ¿Qué cambiarías para un entorno de producción permanente?
+
+Trasladaría la API y el actualizador a infraestructura adecuada para la disponibilidad requerida, utilizaría PostgreSQL gestionado, configuraría copias de seguridad con restauración probada, alertas y gestión de secretos, y repetiría las pruebas. Docker, las migraciones y las variables de entorno facilitan el cambio, pero la plantilla de despliegue no demuestra que esa migración se haya realizado.
 
 ### ¿Qué guardarías en auditoría?
 
@@ -135,7 +147,7 @@ Docker empaqueta dependencias y ejecución. Compose coordina los tres servicios 
 
 ## 5. Demo de 10 minutos
 
-1. Abre README y `/docs`. Explica los tres procesos y la diferencia entre configuración preparada y nube verificada.
+1. Abre README y `/docs`. Explica los tres procesos, la decisión de demo autoalojada y la diferencia declarada respecto al alojamiento del enunciado.
 2. Haz GET /books sin token: 401. Inicia sesión como completo y usa Authorize.
 3. Crea un libro con ISBN válido y consulta su ID. El precio comienza en null.
 4. Calcula el precio. Señala tasa, origen y antigüedad; compáralo con la fórmula.

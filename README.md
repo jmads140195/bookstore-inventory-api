@@ -4,10 +4,11 @@ API REST para la prueba de Nextep: inventario de libros, precios, login y dos ni
 
 **Listo:** código, autenticación, usuarios, tasas persistidas, actualizador independiente, Docker, tests, Swagger y Postman.
 
-**API publicada y verificada:** [Swagger público](https://pruebanextep.dateoapp.com/docs), mediante [Cloudflare Tunnel desde esta PC](docs/CLOUDFLARE.md). **Requisito pendiente del PDF:** PostgreSQL gestionado cloud; la base Docker sigue siendo local. El VPS y los servicios existentes de Dateo no se modificaron.
+**Demo pública y verificada:** [Swagger público](https://pruebanextep.dateoapp.com/docs). Para esta evaluación se eligió una demo autoalojada con Docker y Cloudflare Tunnel, utilizando infraestructura propia para evitar contratar recursos cloud adicionales. La API y PostgreSQL se ejecutan en el equipo del candidato; esta modalidad difiere del alojamiento cloud y de la base gestionada solicitados en los puntos 4 y 5 del enunciado. La [nota de entrega](docs/NOTA-DE-ENTREGA.md) explica la decisión, su alcance y las condiciones de disponibilidad.
 
 ## Documentación
 
+- [Nota de entrega y decisión de despliegue](docs/NOTA-DE-ENTREGA.md)
 - [API: permisos, endpoints, ejemplos y errores](docs/API.md)
 - [Defensa técnica y recorrido para aprender Django](docs/GUIA-DE-DEFENSA.md)
 - [Despliegue y lista final de entrega](docs/DESPLIEGUE.md)
@@ -41,7 +42,7 @@ Para reanudar: `docker compose start`. `API_PORT` cambia el puerto local (14559 
 
 ## Probar con Postman
 
-Importa `postman/bookstore.postman_collection.json` y `postman/local.postman_environment.json`. En el entorno local rellena `admin_username` y `admin_password` con tu cuenta completa, mantén estos valores privados y ejecuta **las 38 peticiones en orden** con Collection Runner.
+Para evaluar la demo publicada, importa `postman/bookstore.postman_collection.json` y `postman/production.postman_environment.json`. Selecciona el entorno público, rellena `admin_username` y `admin_password` con las credenciales de evaluación recibidas por correo y ejecuta **las 38 peticiones en orden** con Collection Runner. Mantén esos valores privados. Si ejecutas tu propia instancia local, utiliza `postman/local.postman_environment.json` y la cuenta que hayas creado en ella.
 
 La colección inicia sesión, prueba el CRUD y los precios, crea un usuario básico, comprueba sus restricciones, cambia permisos y contraseñas, desactiva ese usuario y cierra sesión. El libro temporal se elimina; el usuario temporal queda inactivo. Los tokens se borran del entorno al terminar correctamente. Si interrumpes la colección, cierra la sesión y limpia los valores sensibles antes de exportar. Nunca subas un entorno con credenciales o tokens reales.
 
@@ -128,4 +129,4 @@ docker/     Arranque de la API
 docs/       API, seguridad, defensa, despliegue y evidencia
 ```
 
-Para cerrar la entrega sigue [DESPLIEGUE.md](docs/DESPLIEGUE.md). El servicio local y las pruebas automatizadas no sustituyen el despliegue público solicitado.
+Consulta [DESPLIEGUE.md](docs/DESPLIEGUE.md) para operar la demo y preparar la entrega. La [nota de entrega](docs/NOTA-DE-ENTREGA.md) deja explícita la modalidad de alojamiento y su diferencia respecto al enunciado.

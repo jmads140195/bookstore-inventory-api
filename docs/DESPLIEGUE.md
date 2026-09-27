@@ -2,11 +2,11 @@
 
 ## Estado actual y elección de alojamiento
 
-La API funciona en Docker local con PostgreSQL y un actualizador de tasas independiente. El usuario eligió publicar desde esta PC mediante Cloudflare Tunnel en `pruebanextep.dateoapp.com`. El túnel ya está conectado y la URL pública se verificó con Postman: 38 peticiones y 57 aserciones aprobadas. Consultar [CLOUDFLARE.md](CLOUDFLARE.md) para iniciar/detener y conocer las limitaciones.
+La entrega utiliza una demo autoalojada: API, PostgreSQL y actualizador de tasas en Docker en el equipo del candidato, con acceso HTTPS público mediante Cloudflare Tunnel en `pruebanextep.dateoapp.com`. Se eligió esta modalidad para aprovechar infraestructura existente y evitar contratar recursos cloud adicionales para la evaluación. La URL pública se verificó con Postman: 38 peticiones y 57 aserciones aprobadas. Consultar [CLOUDFLARE.md](CLOUDFLARE.md) para iniciar/detener y conocer las limitaciones.
 
-El túnel permite una URL HTTPS pública, pero **la base sigue siendo local**. El PDF pide una base gestionada en la nube: ese requisito continúa pendiente con esta modalidad. No se debe presentar el PostgreSQL local como cloud gestionado. La PC debe permanecer encendida, conectada y sin suspensión durante la evaluación.
+La [nota de entrega](NOTA-DE-ENTREGA.md) declara la diferencia respecto a los puntos 4 y 5 del enunciado: **tanto el alojamiento cloud de la API como la base de datos gestionada se sustituyen en esta demo por alojamiento en el equipo propio**. El túnel permite evaluar los endpoints remotamente, pero no aloja la API ni PostgreSQL en Cloudflare. La aceptación de esta modalidad corresponde al equipo evaluador. La PC debe permanecer encendida, conectada y sin suspensión durante la evaluación.
 
-Si se necesita cumplir literalmente el requisito de base gestionada, puede migrarse la conexión de la API a una PostgreSQL gestionada separada, manteniendo el túnel, o desplegar todo en Render. El repositorio conserva `render.yaml` para esa alternativa; no se creó ningún recurso de pago.
+Las instrucciones cloud siguientes son una referencia para una posible migración futura; no son un paso pendiente para arrancar la demo elegida ni un compromiso de contratar servicios. Cumplir ambos requisitos de infraestructura implicaría trasladar la API a un proveedor cloud y utilizar una base gestionada. Migrar únicamente PostgreSQL mantendría la diferencia relativa al alojamiento de la API. El repositorio conserva `render.yaml` como alternativa; no se creó ningún recurso de pago.
 
 ## Alternativa: API y PostgreSQL gestionado en Render
 
@@ -54,7 +54,7 @@ El script solo configura los archivos: no verifica conectividad ni declara compl
 - Credenciales de evaluación creadas específicamente y compartidas por el canal de entrega privado, nunca en README/GitHub.
 - README, manual API, Docker y guía de defensa actualizados.
 - Pruebas locales y Postman público aprobados; CI del commit entregado en verde.
-- Confirmación del requisito PostgreSQL gestionado o explicación explícita de que sigue pendiente.
+- Nota de entrega incluida y correo con la decisión de demo autoalojada, indicando expresamente la diferencia respecto a los puntos 4 y 5 del enunciado.
 - Garantizar disponibilidad durante la evaluación; con túnel, dejar PC/Docker/actualizador/túnel activos.
 
 ## Diagnóstico
