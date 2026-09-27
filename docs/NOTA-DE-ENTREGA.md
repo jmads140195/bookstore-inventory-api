@@ -36,6 +36,10 @@ La validación del 27 de septiembre de 2026 registró 63 tests aprobados con Pos
 
 La disponibilidad depende de que el equipo permanezca encendido, conectado y sin suspensión, con Docker y el túnel activos. Esta demo no ofrece alta disponibilidad ni un SLA. El volumen conserva los datos al reiniciar los contenedores, pero no sustituye una política de copias de seguridad.
 
+## Ampliación posterior a la entrega
+
+Como ampliación posterior a la entrega del backend, se añadió [Estante](https://pruebanextep.dateoapp.com/app), una interfaz de login e inventario que utiliza la misma API y las mismas cuentas. La versión con interfaz cuenta con 68 tests de backend aprobados y un recorrido de navegador verificado; ver [FRONTEND.md](FRONTEND.md) y [VALIDACION.md](VALIDACION.md).
+
 ## Portabilidad
 
 El proyecto incluye Dockerfile y Docker Compose para ejecutar la API, PostgreSQL y el actualizador de tasas en un entorno compatible con Docker. Las dependencias y los servicios están definidos en el repositorio; las instrucciones de arranque y creación del usuario inicial se encuentran en el [README](../README.md).

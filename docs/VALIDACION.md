@@ -4,7 +4,7 @@ Comprobaciones ejecutadas el 27 de septiembre de 2026.
 
 | Comprobación | Resultado |
 | --- | --- |
-| Suite Django con PostgreSQL 16 en Docker | 63 tests aprobados, sin omisiones; incluye rechazo de campos del servidor. |
+| Suite Django con PostgreSQL 16 en Docker | 68 tests aprobados, sin omisiones; incluye filtros, resumen e interfaz. |
 | Suite Django con SQLite local, validación anterior al ajuste de campos | 60 aprobados; 1 test de bloqueo de fila omitido por requerir PostgreSQL. |
 | Postman mediante Newman, API Docker local | 38 peticiones y 57 aserciones; 0 fallos. |
 | Esquema OpenAPI | Validado con `--validate --fail-on-warn`, sin advertencias. |
@@ -23,6 +23,12 @@ Tras añadir el mensaje personalizado, se ejecutaron los 63 tests con PostgreSQL
 Después de publicar esta versión, se verificaron en la URL pública el mensaje exacto para `selling_price_local`, `exchange_rate` e `id`, la respuesta habitual para ISBN inválido, `/ready` y el rechazo de acceso anónimo. Estas peticiones no modificaron el inventario. Los resultados de las 38 peticiones de Postman de esta página corresponden a la validación pública anterior a este ajuste.
 
 ## Qué verifican los tests
+
+La ampliación de frontend añadió cinco tests del backend: página pública sin acceso a datos, resumen agregado para cuentas básicas, búsqueda y filtros combinados, rechazo de filtros inválidos y resumen de inventario vacío.
+
+También se ejecutaron 14 comprobaciones de navegador Chrome contra una instancia de revisión: login incorrecto/correcto, persistencia de sesión al recargar, ISBN inválido en el formulario, creación con decimal en coma y texto seguro, cálculo y persistencia de precio, edición móvil, filtros, estado vacío, controles básicos de solo lectura, revocación de sesión, cancelación de eliminación, eliminación confirmada y logout. El libro temporal fue eliminado y la cuenta de prueba quedó inactiva. No se modificaron los libros existentes. Se revisaron capturas de escritorio y móvil, sin errores JavaScript ni desbordamiento horizontal a 390 px.
+
+Tras publicar `/app`, se repitió la comprobación visual y de acceso contra `https://pruebanextep.dateoapp.com`: login real, carga del catálogo y resumen, recursos estáticos, vista móvil, formulario de edición sin guardar cambios y logout. La página pública no presentó errores JavaScript; las acciones del formulario móvil permanecen visibles mientras se desplazan sus campos.
 
 - CRUD, paginación, filtros, validación de país/ISBN/costo/stock y duplicados.
 - Recargo del ejemplo, redondeo final, persistencia e invalidación por cambio de costo.

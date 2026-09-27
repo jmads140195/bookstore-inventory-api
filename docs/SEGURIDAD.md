@@ -33,7 +33,11 @@ El rol full incluye administración de usuarios porque solo se pidieron dos nive
 
 Las rutas API aceptan tokens Bearer enviados explícitamente en la cabecera; no autentican con cookies de sesión. El panel Django usa sus sesiones y protección CSRF habitual. Si se añade un frontend que guarde sesiones en cookies, habrá que diseñar CSRF y cookies para ese flujo.
 
-No se habilitó CORS abierto. Postman y llamadas entre servidores funcionan sin CORS. Un frontend en otro origen requerirá una lista explícita de orígenes autorizados. CORS no sustituye autenticación ni restringe clientes que no sean navegadores.
+La interfaz `/app` usa el mismo origen y peticiones Bearer sin cookies. Conserva el token en `sessionStorage` para la pestaña, limpia la sesión ante 401 y revoca el token al cerrar sesión con conexión. No guarda contraseñas ni utiliza `localStorage`. La página impide caché e incorpora una CSP que limita scripts, estilos y conexiones al propio origen. Los datos del usuario se insertan como texto, no como HTML. Se comprobó con un autor que contenía una etiqueta con manejador JavaScript: se mostró literalmente sin ejecutarla.
+
+`sessionStorage` es accesible para JavaScript del mismo origen; no ofrece la protección de una cookie HttpOnly. La [guía del frontend](FRONTEND.md) documenta este límite, la caducidad y el caso de logout sin conexión. Los controles visuales siguen subordinados a los permisos del backend.
+
+No se habilitó CORS abierto. Postman y llamadas entre servidores funcionan sin CORS. Un frontend en otro origen requeriría una lista explícita de orígenes autorizados. CORS no sustituye autenticación ni restringe clientes que no sean navegadores.
 
 ## Proxy y límites de tráfico
 

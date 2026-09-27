@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.db import transaction
+from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
@@ -7,7 +9,8 @@ from rest_framework.response import Response
 from accounts.permissions import InventoryAccess
 
 from .models import Book
-from .serializers import BookSerializer, CategoryQuerySerializer, PriceCalculationSerializer, StockQuerySerializer
+from .serializers import (BookListQuerySerializer, BookSerializer, CategoryQuerySerializer,
+                          InventoryOverviewSerializer, PriceCalculationSerializer, StockQuerySerializer)
 from .services import calculate_book_price
 
 
@@ -16,6 +19,43 @@ class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
     lookup_value_regex = "[0-9]+"
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == "list":
+            query = BookListQuerySerializer(data=self.request.query_params)
+            query.is_valid(raise_exception=True)
+            values = query.validated_data
+            if values["q"]:
+                term = values["q"]
+                normalized = term.replace("-", "").replace(" ", "")
+                matches = Q(title__icontains=term) | Q(author__icontains=term)
+                if normalized:
+                    matches |= Q(isbn__icontains=normalized)
+                queryset = queryset.filter(matches)
+            if values["category"]:
+                queryset = queryset.filter(category__iexact=values["category"])
+            if values["stock"] == "low":
+                queryset = queryset.filter(stock_quantity__lt=10)
+            elif values["stock"] == "out":
+                queryset = queryset.filter(stock_quantity=0)
+        return queryset
+
+    @extend_schema(parameters=[BookListQuerySerializer])
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(responses=InventoryOverviewSerializer)
+    @action(detail=False, methods=["get"], pagination_class=None)
+    def overview(self, request):
+        books = self.get_queryset()
+        result = books.aggregate(total_titles=Count("id"), total_units=Sum("stock_quantity", default=0),
+                                 low_stock=Count("id", filter=Q(stock_quantity__lt=10)),
+                                 out_of_stock=Count("id", filter=Q(stock_quantity=0)),
+                                 unpriced=Count("id", filter=Q(selling_price_local__isnull=True)))
+        result.update(low_stock_threshold=10, currency=settings.LOCAL_CURRENCY,
+                      categories=list(books.order_by("category").values_list("category", flat=True).distinct()))
+        return Response(InventoryOverviewSerializer(result).data)
 
     def update(self, request, *args, **kwargs):
         # Serializa cambios sobre el mismo libro en PostgreSQL, incluido su precio.

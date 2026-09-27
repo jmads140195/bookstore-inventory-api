@@ -1,6 +1,6 @@
 # Referencia de la API
 
-Versión 2.0. Base local: `http://127.0.0.1:14559`. Base pública verificada: `https://pruebanextep.dateoapp.com`. En esta PC, la configuración pública exige HTTPS; utiliza el subdominio cuando esté activo el archivo Compose del túnel. Documentación interactiva: `/docs`; contrato OpenAPI: `/schema`. Todas las rutas de API van **sin barra final**. Cuerpos JSON con `Content-Type: application/json`.
+Versión 2.1. Base local: `http://127.0.0.1:14559`. Base pública verificada: `https://pruebanextep.dateoapp.com`. En esta PC, la configuración pública exige HTTPS; utiliza el subdominio cuando esté activo el archivo Compose del túnel. Interfaz de inventario: `/app`; documentación interactiva: `/docs`; contrato OpenAPI: `/schema`. Todas las rutas de API van **sin barra final**. Cuerpos JSON con `Content-Type: application/json`.
 
 ## 1. Acceso y sesiones
 
@@ -100,11 +100,16 @@ El administrador inicial se crea por consola con `bootstrap_api_admin`. El rol c
 | `GET /books/{id}` | basic/full | 200, libro. |
 | `GET /books/search?category=Novela` | basic/full | 200, categoría exacta sin distinguir mayúsculas. |
 | `GET /books/low-stock?threshold=10` | basic/full | 200, stock estrictamente menor; default 10. |
+| `GET /books/overview` | basic/full | 200, resumen global y categorías para la interfaz. |
 | `POST /books` | full | 201, libro creado. |
 | `PUT /books/{id}` | full | 200, reemplazar campos editables obligatorios. |
 | `PATCH /books/{id}` | full | 200, modificar algunos campos. |
 | `DELETE /books/{id}` | full | 204, sin cuerpo. |
 | `POST /books/{id}/calculate-price` | full | 200, calcula y guarda; sin cuerpo. |
+
+El listado admite filtros opcionales combinables: `q` busca por título, autor o ISBN (hasta 150 caracteres; los guiones y espacios del ISBN se normalizan); `category` compara la categoría exacta sin distinguir mayúsculas (hasta 100 caracteres); `stock` admite `all`, `low` (menos de 10) y `out` (cero). Los filtros se aplican en el servidor antes de paginar. Por ejemplo: `GET /books?q=quijote&stock=low&page=1`.
+
+`GET /books/overview` devuelve `total_titles`, `total_units`, `low_stock`, `out_of_stock`, `unpriced`, `low_stock_threshold`, `currency` y `categories`. Sus indicadores abarcan todo el inventario e ignoran los filtros de la tabla. Este endpoint no consulta al proveedor de tasas y requiere autenticación.
 
 Cuerpo de creación / PUT:
 
@@ -229,7 +234,7 @@ Otros errores usan el mismo objeto `error` con `code` y `message`; `details` sol
 
 ## 6. Salud y documentación pública
 
-`GET /health`: 200 si el proceso responde. `GET /ready`: verifica PostgreSQL; 200 o 503. `/docs` y `/schema` son públicos para evaluación. `/admin/` usa sesiones y CSRF de Django, con un superusuario creado separadamente por consola.
+`GET /health`: 200 si el proceso responde. `GET /ready`: verifica PostgreSQL; 200 o 503. `/docs` y `/schema` son públicos para evaluación. `/app` sirve la interfaz y su pantalla de login sin exponer datos del inventario en el HTML inicial; las consultas posteriores requieren el token. `/admin/` usa sesiones y CSRF de Django, con un superusuario creado separadamente por consola.
 
 ## 7. Ejemplo PowerShell
 

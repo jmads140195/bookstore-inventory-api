@@ -1,0 +1,115 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#244b3e">
+  <title>Estante · Inventario de librería</title>
+  <link rel="stylesheet" href="{% static 'books/ui.css' %}">
+  <script src="{% static 'books/ui.js' %}" defer></script>
+</head>
+<body data-currency="{{ currency }}">
+<svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-3H4zM13 7a3 3 0 0 1 3-3h5v14h-4a4 4 0 0 0-4 3"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 10a8 8 0 0 0-14-5L3 8m0-5v5h5M4 14a8 8 0 0 0 14 5l3-3m0 5v-5h-5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="m14 5 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h1m3 0h1m3 0h.1M8 15h1m3 0h1m3 0h.1M8 19h1m3 0h1m3 0h.1"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 3h7v7M21 3l-11 11M10 3H3v18h18v-7"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H4v16h6M9 12h12m-5-5 5 5-5 5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="m3 7 9-4 9 4-9 5zM3 7v11l9 4 9-4V7M12 12v10M7 5l9 5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2zM12 9v5m0 3v1"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 3h9l10 10-9 9L3 12z"/><circle cx="8" cy="8" r="1"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></symbol>
+</svg>
+<noscript><div class="banner">Activa JavaScript para utilizar el inventario. También puedes consultar la <a href="/docs">documentación de la API</a>.</div></noscript>
+
+<section id="login-screen" class="login-screen">
+  <div class="login-story">
+    <a href="/app" class="brand brand-light"><span class="brand-mark"><svg><use href="#i-book"/></svg></span><span>estante<span class="brand-caption">INVENTARIO DE LIBRERÍA</span></span></a>
+    <div class="story-copy"><span class="eyebrow">MENOS GESTIÓN. MÁS HISTORIAS.</span><h1>Un lugar para<br>cada libro.</h1><p>Tu catálogo, tus existencias y tus precios.<br>Todo en el mismo estante.</p></div>
+    <div class="book-art" aria-hidden="true"><div class="art-circle"></div><div class="art-book art-book-one"><span>EL ARTE<br>DE CONTAR</span><i></i><small>01 — HISTORIAS</small></div><div class="art-book art-book-two"><span>Entre<br>páginas</span><i></i><small>BIBLIOTECA PERSONAL</small></div><div class="art-book art-book-three"><span>Un nuevo capítulo</span></div><div class="art-shelf"></div></div>
+    <div class="story-footer"><span>Una biblioteca bien organizada empieza aquí.</span><span>NEXTEP · DEMO</span></div>
+  </div>
+  <div class="login-panel">
+    <div class="login-box">
+      <div class="login-symbol"><svg><use href="#i-book"/></svg></div>
+      <span class="eyebrow">BIENVENIDO A ESTANTE</span>
+      <h2>Tu siguiente capítulo.</h2><p class="muted">Inicia sesión para acceder al inventario.</p>
+      <form id="login-form">
+        <div id="login-error" class="form-alert" role="alert" hidden></div>
+        <label for="username">Usuario</label><input id="username" name="username" autocomplete="username" maxlength="150" required placeholder="Tu nombre de usuario">
+        <label for="password">Contraseña</label><div class="password-field"><input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Tu contraseña"><button type="button" class="icon-button" id="toggle-password" aria-label="Mostrar contraseña" aria-pressed="false"><svg><use href="#i-eye"/></svg></button></div>
+        <button class="button primary login-submit" type="submit" id="login-submit">Entrar al inventario <svg><use href="#i-arrow"/></svg></button>
+      </form>
+      <p class="login-help"><svg><use href="#i-lock"/></svg>Accede con la cuenta que te facilitó el administrador.</p>
+      <a class="subtle-link" href="/docs" target="_blank" rel="noopener noreferrer">Explorar la documentación de la API <svg><use href="#i-external"/></svg></a>
+    </div><p class="login-footnote">Un espacio sencillo para cuidar tu inventario.</p>
+  </div>
+</section>
+
+<div id="app-screen" class="app-shell" hidden>
+  <aside class="sidebar">
+    <a href="/app" class="brand"><span class="brand-mark"><svg><use href="#i-book"/></svg></span><span>estante<span class="brand-caption">INVENTARIO DE LIBRERÍA</span></span></a>
+    <span class="nav-label">TU ESPACIO</span>
+    <nav aria-label="Navegación principal"><a href="#inventory" class="nav-item active" aria-current="page"><svg><use href="#i-grid"/></svg> Inventario <span id="sidebar-count" class="nav-count">—</span></a><a href="/docs" class="nav-item" target="_blank" rel="noopener noreferrer"><svg><use href="#i-book"/></svg> Documentación <svg class="external"><use href="#i-external"/></svg></a></nav>
+    <div class="sidebar-note"><span class="little-line"></span><p>Cada libro cuenta.<br>Que ninguno se pierda.</p><small>GESTIONA CON CALMA.</small></div>
+    <div class="user-panel"><span id="user-avatar" class="avatar">U</span><div><strong id="user-name">Usuario</strong><small id="user-role">Consulta</small></div><button id="logout-button" class="icon-button" aria-label="Cerrar sesión" title="Cerrar sesión"><svg><use href="#i-logout"/></svg></button></div>
+  </aside>
+  <main id="inventory" class="workspace">
+    <header class="topbar"><span class="breadcrumb">Mi librería <span>/</span> <strong>Inventario</strong></span><span class="topbar-label"><span class="status-dot"></span> ESPACIO DE TRABAJO</span></header>
+    <div class="page-content">
+      <section class="page-heading"><div><span class="eyebrow" id="greeting">TODO EN SU LUGAR</span><h1>Tu inventario<span>.</span></h1><p class="muted">Una vista clara de los libros que dan vida a tu librería.</p></div><button id="new-book" class="button primary" data-full><svg><use href="#i-plus"/></svg> Añadir libro</button></section>
+      <div id="app-error" class="form-alert global-error" role="alert" hidden></div>
+      <div id="readonly-note" class="info-banner" hidden>Tu cuenta tiene acceso de consulta. Puedes explorar los libros, sus existencias y precios.</div>
+      <section class="stats-grid" aria-label="Resumen de todo el inventario">
+        <article class="stat-card"><div class="stat-top"><span>Títulos en catálogo</span><svg><use href="#i-book"/></svg></div><strong id="stat-titles">—</strong><small>Historias en tu estante</small></article>
+        <article class="stat-card"><div class="stat-top"><span>Ejemplares</span><svg><use href="#i-box"/></svg></div><strong id="stat-units">—</strong><small>Unidades disponibles</small></article>
+        <article class="stat-card"><div class="stat-top"><span>Stock bajo</span><svg><use href="#i-alert"/></svg></div><strong id="stat-low">—</strong><small>Menos de 10 unidades, incluidos agotados</small></article>
+        <article class="stat-card"><div class="stat-top"><span>Sin precio calculado</span><svg><use href="#i-tag"/></svg></div><strong id="stat-unpriced">—</strong><small>Listos para calcular su precio</small></article>
+      </section>
+      <section class="catalog-panel" aria-labelledby="catalog-heading">
+        <div class="catalog-heading"><div><h2 id="catalog-heading">El catálogo <span id="catalog-count" class="count-badge">—</span></h2><p>Encuentra, revisa y organiza tus libros.</p></div><button id="reload-button" class="button secondary compact"><svg><use href="#i-refresh"/></svg> Actualizar</button></div>
+        <div class="catalog-tools"><div class="search-box"><svg><use href="#i-search"/></svg><label class="sr-only" for="book-search">Buscar por título, autor o ISBN</label><input id="book-search" type="search" placeholder="Buscar por título, autor o ISBN…" maxlength="150" autocomplete="off"></div><label class="sr-only" for="category-filter">Filtrar por categoría</label><select id="category-filter"><option value="">Todas las categorías</option></select></div>
+        <div class="catalog-filters"><div class="filter-tabs" role="group" aria-label="Filtrar por existencias"><button data-stock="all" class="filter-tab selected" aria-pressed="true">Todos los libros</button><button data-stock="low" class="filter-tab" aria-pressed="false">Stock bajo</button><button data-stock="out" class="filter-tab" aria-pressed="false">Agotados</button></div><span id="list-status" class="list-status" aria-live="polite"></span></div>
+        <div class="table-wrap"><table><caption class="sr-only">Libros del inventario y acciones disponibles</caption><thead><tr><th>Libro</th><th>Categoría</th><th>Existencias</th><th>Costo · USD</th><th id="price-heading">Venta · {{ currency }}</th><th><span class="sr-only">Acciones</span></th></tr></thead><tbody id="book-rows"></tbody></table></div>
+        <div id="empty-state" class="empty-state" hidden><span class="empty-icon"><svg><use href="#i-book"/></svg></span><h3 id="empty-title">Tu estante empieza aquí</h3><p id="empty-description">Añade tu primer libro para comenzar a organizar el inventario.</p><button id="empty-add" class="button primary" data-full><svg><use href="#i-plus"/></svg> Añadir primer libro</button><button id="clear-filters" class="button secondary" hidden>Limpiar filtros</button></div>
+        <footer class="table-footer"><span id="pagination-info">Cargando catálogo…</span><div class="pagination"><button id="previous-page" class="button secondary compact" disabled aria-label="Página anterior">←</button><span id="page-number">Página 1</span><button id="next-page" class="button secondary compact" disabled aria-label="Página siguiente">→</button></div></footer>
+      </section>
+      <section class="rate-panel" aria-labelledby="rate-title"><div class="rate-icon"><svg><use href="#i-calc"/></svg></div><div class="rate-content"><h2 id="rate-title">Una referencia para tus precios</h2><p id="rate-value">Consultando la tasa de cambio…</p><small id="rate-date">El precio sugerido aplica un recargo del 40 % sobre el costo convertido.</small><p id="rate-warning" class="rate-warning" hidden></p></div><button id="refresh-rate" class="button secondary compact" data-full><svg><use href="#i-refresh"/></svg> Actualizar tasa</button></section>
+      <footer class="workspace-footer"><span>ESTANTE <span class="footer-dot">·</span> Cada libro, en su lugar.</span><a href="/docs" target="_blank" rel="noopener noreferrer">Documentación de la API ↗</a></footer>
+    </div>
+  </main>
+</div>
+
+<dialog id="book-dialog" aria-labelledby="book-dialog-title">
+  <div class="dialog-heading"><div><span class="eyebrow">TU CATÁLOGO</span><h2 id="book-dialog-title">Añadir libro</h2></div><button class="icon-button" data-close="book-dialog" aria-label="Cerrar formulario"><svg><use href="#i-close"/></svg></button></div>
+  <form id="book-form">
+    <div class="dialog-body"><div id="book-error" class="form-alert" role="alert" hidden></div><p id="book-dialog-intro" class="muted">Los pequeños detalles hacen un buen catálogo.</p>
+      <div class="form-grid">
+        <div class="field full-width"><label for="book-title">Título</label><input id="book-title" name="title" required maxlength="255" placeholder="El nombre de una nueva historia"><small id="error-title" class="field-error"></small></div>
+        <div class="field full-width"><label for="book-author">Autor</label><input id="book-author" name="author" required maxlength="255" placeholder="Nombre del autor"><small id="error-author" class="field-error"></small></div>
+        <div class="field full-width"><label for="book-isbn">ISBN</label><input id="book-isbn" name="isbn" required maxlength="30" placeholder="Ej. 978-0-306-40615-7" aria-describedby="isbn-help error-isbn"><small id="isbn-help">Copia el ISBN de la contraportada. Admite 10 o 13 caracteres, con o sin guiones.</small><small id="error-isbn" class="field-error"></small></div>
+        <div class="field"><label for="book-cost">Costo en dólares</label><div class="affix-input"><span>USD</span><input id="book-cost" name="cost_usd" inputmode="decimal" required maxlength="13" placeholder="20.00"></div><small id="error-cost_usd" class="field-error"></small></div>
+        <div class="field"><label for="book-stock">Ejemplares en stock</label><input id="book-stock" name="stock_quantity" type="number" min="0" max="2147483647" step="1" required placeholder="0"><small id="error-stock_quantity" class="field-error"></small></div>
+        <div class="field"><label for="book-category">Categoría</label><input id="book-category" name="category" required maxlength="100" list="category-suggestions" placeholder="Ej. Literatura"><datalist id="category-suggestions"></datalist><small id="error-category" class="field-error"></small></div>
+        <div class="field"><label for="book-country">País del proveedor</label><select id="book-country" name="supplier_country" required><option value="">Selecciona un país</option>{% for country in countries %}<option value="{{ country.code }}">{{ country.name }} ({{ country.code }})</option>{% endfor %}</select><small id="error-supplier_country" class="field-error"></small></div>
+      </div><div id="book-price-note" class="info-banner">El precio de venta se calcula después de guardar el libro, utilizando la tasa de cambio y el recargo del 40 %.</div><p id="book-updated" class="dialog-meta"></p>
+    </div>
+    <div class="dialog-footer"><button type="button" class="button danger-quiet" id="delete-book" hidden><svg><use href="#i-trash"/></svg> Eliminar</button><span class="spacer"></span><button type="button" class="button secondary" data-close="book-dialog">Cerrar</button><button type="submit" class="button primary" id="save-book">Guardar libro</button></div>
+  </form>
+</dialog>
+
+<dialog id="delete-dialog" class="small-dialog" aria-labelledby="delete-title"><div class="dialog-heading"><h2 id="delete-title">¿Eliminar este libro?</h2><button class="icon-button" data-close="delete-dialog" aria-label="Cancelar eliminación"><svg><use href="#i-close"/></svg></button></div><div class="dialog-body"><p>Se eliminará <strong id="delete-book-name"></strong> del inventario. Esta acción no se puede deshacer.</p><div id="delete-error" class="form-alert" role="alert" hidden></div></div><div class="dialog-footer"><button class="button secondary" data-close="delete-dialog">Conservar libro</button><button id="confirm-delete" class="button danger">Sí, eliminar</button></div></dialog>
+
+<dialog id="price-dialog" class="small-dialog" aria-labelledby="price-title"><div class="dialog-heading"><div><span class="eyebrow">PRECIO SUGERIDO</span><h2 id="price-title">Un precio con fundamento.</h2></div><button class="icon-button" data-close="price-dialog" aria-label="Cerrar cálculo"><svg><use href="#i-close"/></svg></button></div><div class="dialog-body"><p id="price-book-name" class="muted"></p><div id="price-error" class="form-alert" role="alert" hidden></div><div id="price-loading" class="loading-note">Calculando y guardando el precio…</div><div id="price-result" hidden><div class="price-hero"><span>Precio de venta</span><strong id="result-price"></strong><small>Calculado y guardado en el libro</small></div><dl id="price-breakdown" class="price-breakdown"></dl><div id="price-warning" class="info-banner" hidden></div></div></div><div class="dialog-footer"><button class="button primary" data-close="price-dialog">Entendido</button></div></dialog>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

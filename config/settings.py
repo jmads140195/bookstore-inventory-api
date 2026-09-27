@@ -126,7 +126,7 @@ REST_FRAMEWORK = {
     "COERCE_DECIMAL_TO_STRING": True,
 }
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Bookstore Inventory API", "VERSION": "2.0.0",
+    "TITLE": "Bookstore Inventory API", "VERSION": "2.1.0",
     "DESCRIPTION": "Inventario y precios sugeridos. Importes decimales expresados como cadenas. Tasas: https://www.exchangerate-api.com",
     "SERVE_INCLUDE_SCHEMA": False, "COMPONENT_SPLIT_REQUEST": True,
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],

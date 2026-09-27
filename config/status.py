@@ -7,7 +7,7 @@ from .exceptions import error_payload
 
 @require_GET
 def home(request):
-    return JsonResponse({"name": "Bookstore Inventory API", "docs": "/docs", "health": "/health", "ready": "/ready", "books": "/books"})
+    return JsonResponse({"name": "Bookstore Inventory API", "app": "/app", "docs": "/docs", "health": "/health", "ready": "/ready", "books": "/books"})
 
 
 @require_GET

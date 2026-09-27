@@ -90,5 +90,22 @@ class CategoryQuerySerializer(serializers.Serializer):
     category = serializers.CharField(max_length=100)
 
 
+class BookListQuerySerializer(serializers.Serializer):
+    q = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
+    category = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    stock = serializers.ChoiceField(choices=["all", "low", "out"], default="all")
+
+
+class InventoryOverviewSerializer(serializers.Serializer):
+    total_titles = serializers.IntegerField()
+    total_units = serializers.IntegerField()
+    low_stock = serializers.IntegerField()
+    out_of_stock = serializers.IntegerField()
+    unpriced = serializers.IntegerField()
+    low_stock_threshold = serializers.IntegerField()
+    currency = serializers.CharField()
+    categories = serializers.ListField(child=serializers.CharField())
+
+
 class StockQuerySerializer(serializers.Serializer):
     threshold = serializers.IntegerField(min_value=0, max_value=2147483647, default=10)

@@ -4,11 +4,14 @@ API REST para la prueba de Nextep: inventario de libros, precios, login y dos ni
 
 **Listo:** código, autenticación, usuarios, tasas persistidas, actualizador independiente, Docker, tests, Swagger y Postman.
 
+**Ampliación posterior a la entrega:** [Estante, interfaz de inventario](https://pruebanextep.dateoapp.com/app). Incluye pantalla de login, búsqueda, filtros de stock, creación y edición de libros, cálculo de precios y eliminación con confirmación. Usa las mismas cuentas y permisos de la API. [Guía de la interfaz](docs/FRONTEND.md).
+
 **Demo pública y verificada:** [Swagger público](https://pruebanextep.dateoapp.com/docs). Para esta evaluación se eligió una demo autoalojada con Docker y Cloudflare Tunnel, utilizando infraestructura propia para evitar contratar recursos cloud adicionales. La API y PostgreSQL se ejecutan en el equipo del candidato; esta modalidad difiere del alojamiento cloud y de la base gestionada solicitados en los puntos 4 y 5 del enunciado. La [nota de entrega](docs/NOTA-DE-ENTREGA.md) explica la decisión, su alcance y las condiciones de disponibilidad.
 
 ## Documentación
 
 - [Nota de entrega y decisión de despliegue](docs/NOTA-DE-ENTREGA.md)
+- [Interfaz de inventario: uso, implementación y sesión](docs/FRONTEND.md)
 - [API: permisos, endpoints, ejemplos y errores](docs/API.md)
 - [Defensa técnica y recorrido para aprender Django](docs/GUIA-DE-DEFENSA.md)
 - [Despliegue y lista final de entrega](docs/DESPLIEGUE.md)
@@ -27,7 +30,7 @@ docker compose exec web python manage.py seed_demo
 
 El segundo comando pide una contraseña de al menos 12 caracteres sin mostrarla. No hay credenciales predeterminadas. Es idempotente: si el administrador ya existe, conserva su contraseña. Los demás usuarios se crean desde `POST /users`.
 
-Abre [Swagger local](http://127.0.0.1:14559/docs). Ejecuta `POST /auth/login`, copia el `token` devuelto y pégalo en **Authorize** (solo el token; Swagger añade `Bearer`). Después puedes probar las rutas protegidas.
+Abre [la interfaz local](http://127.0.0.1:14559/app) e inicia sesión con la cuenta creada. También puedes usar [Swagger local](http://127.0.0.1:14559/docs): ejecuta `POST /auth/login`, copia el `token` devuelto y pégalo en **Authorize** (solo el token; Swagger añade `Bearer`). Después puedes probar las rutas protegidas.
 
 Compose inicia PostgreSQL, la API y `rate-worker`. La base persiste en un volumen y no publica un puerto al host; la API solo escucha en el host local. El worker consulta si toca sincronizar cada minuto; normalmente hace dos consultas al proveedor al día, a las 08:00 y 15:00 de Caracas, además de la inicialización y reintentos.
 
@@ -73,7 +76,7 @@ En la sesión local preparada, el entorno virtual está en `../../work/.venv`. L
 | Consultar su perfil, cambiar su contraseña y cerrar sus sesiones | Sí | Sí |
 | Forzar actualización de tasa | No | Sí |
 
-El rol completo es administrador de esta API; no concede acceso al servidor ni al panel Django `/admin/`. Todos comparten el mismo inventario. No hay registro público, interfaz gráfica de login ni multitenencia.
+El rol completo es administrador de esta API; no concede acceso al servidor ni al panel Django `/admin/`. Todos comparten el mismo inventario. La pantalla de login está en `/app`; no hay registro público ni multitenencia.
 
 ## Configuración
 
