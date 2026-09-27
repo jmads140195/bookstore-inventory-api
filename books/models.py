@@ -1,7 +1,9 @@
 from decimal import Decimal
 
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import MinValueValidator
 from django.db import models
+
+from .validators import validate_country, validate_isbn
 
 
 class Book(models.Model):
@@ -11,10 +13,7 @@ class Book(models.Model):
     isbn = models.CharField(
         max_length=13,
         unique=True,
-        validators=[RegexValidator(
-            regex=r"\A(?:[0-9]{9}[0-9X]|[0-9]{13})\Z",
-            message="Usa un ISBN de 10 o 13 caracteres, sin espacios ni guiones.",
-        )],
+        validators=[validate_isbn],
     )
     cost_usd = models.DecimalField(
         max_digits=12,
@@ -32,10 +31,7 @@ class Book(models.Model):
     category = models.CharField(max_length=100)
     supplier_country = models.CharField(
         max_length=2,
-        validators=[RegexValidator(
-            regex=r"\A[A-Z]{2}\Z",
-            message="Usa un código de país de dos letras mayúsculas, como ES.",
-        )],
+        validators=[validate_country],
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

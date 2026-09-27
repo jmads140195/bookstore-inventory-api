@@ -1,0 +1,476 @@
+{
+  "info": {
+    "name": "Nextep - Bookstore Inventory API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecutar en orden. Crea un ISBN de prueba y elimina únicamente ese libro al finalizar. Seleccionar entorno Local o Producción. Producción está pendiente hasta configurar una URL real con scripts/configure_postman.py."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8080"
+    },
+    {
+      "key": "book_id",
+      "value": ""
+    },
+    {
+      "key": "demo_isbn",
+      "value": ""
+    },
+    {
+      "key": "calculated_price",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const base = pm.variables.get(\"base_url\");",
+          "if (!base || !/^https?:\\/\\//.test(base)) throw new Error(\"Configura base_url con la URL real de la API antes de ejecutar.\");"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Salud",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Aplicación disponible\", () => pm.expect(pm.response.json().status).to.eql(\"ok\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Base de datos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/ready"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Base disponible\", () => pm.expect(pm.response.json().database).to.eql(\"ok\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Crear libro",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/books",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Libro de prueba Postman\",\n  \"author\": \"Evaluación Nextep\",\n  \"isbn\": \"{{demo_isbn}}\",\n  \"cost_usd\": \"15.99\",\n  \"stock_quantity\": 25,\n  \"category\": \"Novela\",\n  \"supplier_country\": \"ES\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+              "if (pm.response.code === 201) pm.collectionVariables.set(\"book_id\", pm.response.json().id);",
+              "pm.test(\"Precio aún no calculado\", () => pm.expect(pm.response.json().selling_price_local).to.eql(null));"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const prefix = \"978\" + String(Date.now()).slice(-9);",
+              "const sum = [...prefix].reduce((total, c, i) => total + Number(c) * (i % 2 ? 3 : 1), 0);",
+              "pm.collectionVariables.set(\"demo_isbn\", prefix + ((10 - sum % 10) % 10));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Listar libros",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/books"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Lista paginada\", () => pm.expect(pm.response.json().results).to.be.an(\"array\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Consultar libro",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/books/{{book_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"ID creado\", () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get(\"book_id\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Rechazar ISBN duplicado",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/books",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Libro de prueba Postman\",\n  \"author\": \"Evaluación Nextep\",\n  \"isbn\": \"{{demo_isbn}}\",\n  \"cost_usd\": \"15.99\",\n  \"stock_quantity\": 25,\n  \"category\": \"Novela\",\n  \"supplier_country\": \"ES\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"Error ISBN\", () => pm.expect(pm.response.json().error.details).to.have.property(\"isbn\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Rechazar costo cero",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/books",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Libro de prueba Postman\",\n  \"author\": \"Evaluación Nextep\",\n  \"isbn\": \"{{demo_isbn}}\",\n  \"cost_usd\": \"0.00\",\n  \"stock_quantity\": 25,\n  \"category\": \"Novela\",\n  \"supplier_country\": \"ES\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"Error costo\", () => pm.expect(pm.response.json().error.details).to.have.property(\"cost_usd\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Rechazar checksum ISBN",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/books",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Libro de prueba Postman\",\n  \"author\": \"Evaluación Nextep\",\n  \"isbn\": \"9780306406158\",\n  \"cost_usd\": \"15.99\",\n  \"stock_quantity\": 25,\n  \"category\": \"Novela\",\n  \"supplier_country\": \"ES\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"Error ISBN\", () => pm.expect(pm.response.json().error.details).to.have.property(\"isbn\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Calcular precio",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{base_url}}/books/{{book_id}}/calculate-price"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "const calculation = pm.response.json();",
+              "pm.test(\"Recargo 40%\", () => pm.expect(calculation.margin_percentage).to.eql(40));",
+              "pm.test(\"Precio positivo\", () => pm.expect(Number(calculation.selling_price_local)).to.be.above(0));",
+              "pm.test(\"Origen de la tasa\", () => pm.expect([\"api\", \"fallback\"]).to.include(calculation.rate_source));",
+              "pm.collectionVariables.set(\"calculated_price\", calculation.selling_price_local);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Comprobar precio guardado",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/books/{{book_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Precio persistido\", () => pm.expect(pm.response.json().selling_price_local).to.eql(pm.collectionVariables.get(\"calculated_price\")));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Actualizar libro PUT",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/books/{{book_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Libro de prueba Postman\",\n  \"author\": \"Evaluación Nextep\",\n  \"isbn\": \"{{demo_isbn}}\",\n  \"cost_usd\": \"20.00\",\n  \"stock_quantity\": 5,\n  \"category\": \"Novela\",\n  \"supplier_country\": \"ES\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Costo nuevo invalida precio\", () => pm.expect(pm.response.json().selling_price_local).to.eql(null));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Actualizar stock PATCH",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/books/{{book_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stock_quantity\": 3\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Stock actualizado\", () => pm.expect(pm.response.json().stock_quantity).to.eql(3));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Buscar categoría",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/books/search?category=Novela"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Filtro categoría\", () => pm.response.json().results.forEach(book => pm.expect(book.category.toLowerCase()).to.eql(\"novela\")));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Consultar stock bajo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/books/low-stock?threshold=10"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Stock menor que umbral\", () => pm.response.json().results.forEach(book => pm.expect(book.stock_quantity).to.be.below(10)));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Rechazar umbral inválido",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/books/low-stock?threshold=-1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Eliminar libro de prueba",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{base_url}}/books/{{book_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Comprobar eliminación",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/books/{{book_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

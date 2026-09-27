@@ -1,5 +1,7 @@
 # Paso 2: de una clase Python a una tabla SQL
 
+Nota: este documento conserva la lección del paso 2. La implementación actual ya incluye la validación completa de ISBN y la API descritas en README.md.
+
 Objetivo: definir un libro, crear su tabla y guardar/consultar una fila.
 El endpoint `/health` del paso anterior conserva tu mensaje.
 
