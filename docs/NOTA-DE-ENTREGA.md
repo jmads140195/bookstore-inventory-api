@@ -38,6 +38,14 @@ La disponibilidad depende de que el equipo permanezca encendido, conectado y sin
 
 ## Portabilidad
 
-El repositorio incluye configuración por variables de entorno, migraciones y una plantilla `render.yaml` como referencia para otro despliegue. Una migración futura requeriría provisionar y configurar los servicios, trasladar los datos que se quieran conservar y verificar de nuevo acceso, TLS, tareas programadas y Postman. Esa infraestructura no forma parte del despliegue entregado.
+El proyecto incluye Dockerfile y Docker Compose para ejecutar la API, PostgreSQL y el actualizador de tasas en un entorno compatible con Docker. Las dependencias y los servicios están definidos en el repositorio; las instrucciones de arranque y creación del usuario inicial se encuentran en el [README](../README.md).
+
+Desde la raíz del repositorio, los tres servicios se levantan con:
+
+```sh
+docker compose up --build -d
+```
+
+La configuración se adapta mediante variables de entorno. Para alojarlo en otro proveedor, deben configurarse los recursos y credenciales correspondientes. La transferencia de datos existentes es un paso adicional cuando se desea conservarlos.
 
 Las instrucciones operativas están en [CLOUDFLARE.md](CLOUDFLARE.md) y las alternativas de despliegue en [DESPLIEGUE.md](DESPLIEGUE.md).
