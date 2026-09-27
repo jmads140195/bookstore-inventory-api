@@ -53,7 +53,45 @@ class BookAPITests(APITestCase):
                 data.update(changes)
                 response = self.client.post("/books", data, format="json")
                 self.assertEqual(response.status_code, 400, response.data)
+                if "unexpected" not in changes:
+                    self.assertEqual(response.data["error"]["message"], "Datos inválidos.")
         self.assertEqual(Book.objects.count(), 1)
+
+    def test_create_rejects_server_fields_with_custom_message_without_saving(self):
+        fields = {"id": 999, "selling_price_local": "1.00", "created_at": "2020-01-01T00:00:00Z",
+                  "updated_at": "2020-01-01T00:00:00Z", "exchange_rate": "0.01",
+                  "margin_percentage": 0, "currency": "USD", "unexpected": "value"}
+        for changes in [{key: value} for key, value in fields.items()] + [fields]:
+            with self.subTest(fields=list(changes)):
+                response = self.client.post("/books", book_data(isbn="9780306406157", **changes), format="json")
+                self.assertEqual(response.status_code, 400, response.data)
+                self.assertEqual(response.data["error"]["code"], "validation_error")
+                self.assertEqual(response.data["error"]["message"],
+                                 "Tratando de romper mi endpoint amigo? Suerte la proxima, saludos")
+                self.assertEqual(set(response.data["error"]["details"]), set(changes))
+                if "selling_price_local" in changes:
+                    self.assertEqual(response.data["error"]["details"]["selling_price_local"],
+                                     ["Campo de solo lectura; lo establece el servidor."])
+                if "exchange_rate" in changes:
+                    self.assertEqual(response.data["error"]["details"]["exchange_rate"], ["Campo desconocido."])
+                self.assertEqual(Book.objects.count(), 1)
+
+    def test_put_and_patch_reject_server_fields_without_partial_changes(self):
+        self.book.selling_price_local = Decimal("19.03")
+        self.book.save()
+        before = Book.objects.values().get(pk=self.book.pk)
+        for method in (self.client.put, self.client.patch):
+            for fields in ({"selling_price_local": "1.00"}, {"id": 999},
+                           {"created_at": "2020-01-01T00:00:00Z"}, {"updated_at": "2020-01-01T00:00:00Z"},
+                           {"exchange_rate": "0.01", "margin_percentage": 0}):
+                with self.subTest(method=method.__name__, fields=list(fields)):
+                    data = book_data(title="No debe guardarse", cost_usd="30.00", stock_quantity=0, **fields)
+                    response = method(f"/books/{self.book.pk}", data, format="json")
+                    self.assertEqual(response.status_code, 400, response.data)
+                    self.assertEqual(response.data["error"]["message"],
+                                     "Tratando de romper mi endpoint amigo? Suerte la proxima, saludos")
+                    self.assertEqual(set(response.data["error"]["details"]), set(fields))
+                    self.assertEqual(Book.objects.values().get(pk=self.book.pk), before)
 
     def test_valid_isbn_10_with_x_is_accepted(self):
         response = self.client.post("/books", book_data(isbn="0-8044-2957-x"), format="json")
@@ -94,10 +132,10 @@ class BookAPITests(APITestCase):
         self.book.refresh_from_db()
         self.assertIsNone(self.book.selling_price_local)
 
-    def test_stock_change_preserves_price_and_clients_cannot_set_price(self):
+    def test_stock_change_preserves_price(self):
         self.book.selling_price_local = Decimal("19.03")
         self.book.save()
-        response = self.client.patch(f"/books/{self.book.pk}", {"stock_quantity": 0, "selling_price_local": "1.00"}, format="json")
+        response = self.client.patch(f"/books/{self.book.pk}", {"stock_quantity": 0}, format="json")
         self.assertEqual(response.status_code, 200)
         self.book.refresh_from_db()
         self.assertEqual(self.book.selling_price_local, Decimal("19.03"))

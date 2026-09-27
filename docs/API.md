@@ -131,7 +131,24 @@ Cuerpo de creación / PUT:
 | `id`, `created_at`, `updated_at` | Solo lectura; generados por servidor. |
 | `selling_price_local` | Solo lectura, hasta 16 enteros y 2 decimales, comienza null. |
 
-Los campos desconocidos generan 400. Los campos de libro de solo lectura se ignoran si se envían: el cliente no puede imponer el precio. Cambiar `cost_usd` vuelve el precio a `null`; cambiar stock lo conserva. Las listas ordenan por ID, con 20 registros por página:
+En `POST /books`, `PUT /books/{id}` y `PATCH /books/{id}`, los campos desconocidos y los campos de solo lectura generan 400 con el mensaje personalizado siguiente y el detalle de los campos rechazados. Se rechaza toda la operación: tampoco se guardan otros campos válidos incluidos en la misma petición. El cliente no puede imponer el precio, el ID ni las fechas del servidor. Esta versión sustituye el comportamiento anterior que ignoraba los campos de solo lectura.
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Tratando de romper mi endpoint amigo? Suerte la proxima, saludos",
+    "details": {
+      "selling_price_local": ["Campo de solo lectura; lo establece el servidor."],
+      "exchange_rate": ["Campo desconocido."]
+    }
+  }
+}
+```
+
+Los errores de datos editables, como ISBN inválido, costo negativo o duplicados, conservan el mensaje `Datos inválidos.` y sus detalles. El mensaje personalizado identifica campos no admitidos; no implica que se haya detectado un ataque.
+
+Cambiar `cost_usd` en una petición válida vuelve el precio a `null`; cambiar stock lo conserva. Las listas ordenan por ID, con 20 registros por página:
 
 ```json
 {"count": 0, "next": null, "previous": null, "results": []}

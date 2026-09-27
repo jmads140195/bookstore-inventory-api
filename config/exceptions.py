@@ -15,6 +15,12 @@ class ExchangeRateUnavailable(APIException):
     default_code = "exchange_rate_unavailable"
 
 
+class ForbiddenInputFields(APIException):
+    status_code = 400
+    default_code = "validation_error"
+    default_detail = "Tratando de romper mi endpoint amigo? Suerte la proxima, saludos"
+
+
 def error_payload(code, message, details=None):
     error = {"code": code, "message": message}
     if details is not None:
@@ -25,8 +31,9 @@ def error_payload(code, message, details=None):
 def api_exception_handler(exc, context):
     response = exception_handler(exc, context)
     if response is not None:
-        if isinstance(exc, ValidationError):
-            response.data = error_payload("validation_error", "Datos inválidos.", response.data)
+        if isinstance(exc, (ValidationError, ForbiddenInputFields)):
+            message = exc.default_detail if isinstance(exc, ForbiddenInputFields) else "Datos inválidos."
+            response.data = error_payload("validation_error", message, response.data)
         else:
             message = str(response.data.get("detail", "No se pudo procesar la petición."))
             response.data = error_payload(getattr(exc, "default_code", "request_error"), message)

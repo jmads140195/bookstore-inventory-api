@@ -4,6 +4,8 @@ from django.db import IntegrityError, transaction
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
+from config.exceptions import ForbiddenInputFields
+
 from .models import Book
 from .validators import normalize_isbn, validate_country, validate_isbn
 
@@ -39,8 +41,11 @@ class BookSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         if isinstance(data, Mapping):
             unknown = set(data) - set(self.fields)
-            if unknown:
-                raise serializers.ValidationError({key: ["Campo desconocido."] for key in sorted(unknown)})
+            read_only = set(data) & set(self.Meta.read_only_fields)
+            errors = {key: ["Campo desconocido."] for key in sorted(unknown)}
+            errors.update({key: ["Campo de solo lectura; lo establece el servidor."] for key in sorted(read_only)})
+            if errors:
+                raise ForbiddenInputFields(errors)
         return super().to_internal_value(data)
 
     def create(self, validated_data):

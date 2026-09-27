@@ -32,7 +32,7 @@ Esta diferencia se declara expresamente como una decisión de alcance para la de
 
 ## Validación y disponibilidad
 
-La validación del 27 de septiembre de 2026 registró 61 tests aprobados con PostgreSQL y 38 peticiones con 57 aserciones aprobadas en Postman contra la URL pública. El detalle está en [VALIDACION.md](VALIDACION.md).
+La validación del 27 de septiembre de 2026 registró 63 tests aprobados con PostgreSQL. La comprobación previa de Postman contra la URL pública completó 38 peticiones con 57 aserciones aprobadas; el posterior ajuste del mensaje de campos no admitidos se verificó con pruebas específicas también en la API pública. El detalle está en [VALIDACION.md](VALIDACION.md).
 
 La disponibilidad depende de que el equipo permanezca encendido, conectado y sin suspensión, con Docker y el túnel activos. Esta demo no ofrece alta disponibilidad ni un SLA. El volumen conserva los datos al reiniciar los contenedores, pero no sustituye una política de copias de seguridad.
 

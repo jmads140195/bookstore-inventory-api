@@ -16,7 +16,7 @@ La API incorpora controles para esta evaluación; no se presenta como una audito
 | JSON excesivo | Parser lee como máximo 64 KiB + 1 y rechaza cuerpos mayores. | 413 en tests de login y creación. |
 | SQL injection | ORM Django y filtros con parámetros; sin SQL construido desde entradas. | Las consultas usan `filter`, `get`, `select_for_update`; sin interpolación de SQL del cliente. |
 | Valores inconsistentes | Serializers, validadores y restricciones SQL de Book. | Tests de ISBN, costo, stock, país y duplicados. |
-| Precio manipulado por cliente | Precio de solo lectura; cálculo exclusivamente en servidor. | Enviar `selling_price_local` no cambia el precio. |
+| Precio o campos del servidor manipulados por cliente | Precio, ID y fechas de solo lectura; cálculo exclusivamente en servidor. | Enviar esos campos o campos desconocidos en POST/PUT/PATCH de libros devuelve 400 con detalle y mensaje personalizado; no guarda cambios parciales. |
 | Precio calculado con costo concurrente antiguo | Transacción y bloqueo de la fila Book en PostgreSQL. | Test con dos conexiones reales. |
 | Secretos en Git | Variables de entorno y exclusiones .gitignore/.dockerignore; Postman sin secretos. | Revisar archivos antes de publicar y mantener credenciales locales fuera del repo. |
 | Filtración por errores | Respuestas sanitizadas; DEBUG desactivado y validado en producción. | Tests de 500/503 no incluyen el mensaje interno. |

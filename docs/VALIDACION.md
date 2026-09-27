@@ -4,8 +4,8 @@ Comprobaciones ejecutadas el 27 de septiembre de 2026.
 
 | Comprobación | Resultado |
 | --- | --- |
-| Suite Django con PostgreSQL 16 en Docker | 61 tests aprobados, sin omisiones. |
-| Suite Django con SQLite local | 60 aprobados; 1 test de bloqueo de fila omitido por requerir PostgreSQL. |
+| Suite Django con PostgreSQL 16 en Docker | 63 tests aprobados, sin omisiones; incluye rechazo de campos del servidor. |
+| Suite Django con SQLite local, validación anterior al ajuste de campos | 60 aprobados; 1 test de bloqueo de fila omitido por requerir PostgreSQL. |
 | Postman mediante Newman, API Docker local | 38 peticiones y 57 aserciones; 0 fallos. |
 | Esquema OpenAPI | Validado con `--validate --fail-on-warn`, sin advertencias. |
 | Migraciones | `makemigrations --check --dry-run`: sin cambios pendientes. |
@@ -15,6 +15,12 @@ Comprobaciones ejecutadas el 27 de septiembre de 2026.
 | Docker | Imagen construida; PostgreSQL/API saludables y worker de tasas ejecutándose. |
 | URL pública / Cloudflare | HTTPS /ready y /docs correctos; /books sin token devuelve 401; Postman público: 38 peticiones, 57 aserciones, 0 fallos. |
 | Modalidad de alojamiento | Demo autoalojada por decisión de alcance y costes: API y PostgreSQL en el equipo del candidato. Difiere de los puntos 4 y 5 del enunciado; ver [nota de entrega](NOTA-DE-ENTREGA.md). |
+
+## Verificación del mensaje para campos no admitidos
+
+Tras añadir el mensaje personalizado, se ejecutaron los 63 tests con PostgreSQL. Se comprobó que POST, PUT y PATCH rechazan campos de solo lectura o desconocidos con 400 y sin guardar cambios parciales. Las validaciones habituales conservan `Datos inválidos.` y el detalle del campo.
+
+Después de publicar esta versión, se verificaron en la URL pública el mensaje exacto para `selling_price_local`, `exchange_rate` e `id`, la respuesta habitual para ISBN inválido, `/ready` y el rechazo de acceso anónimo. Estas peticiones no modificaron el inventario. Los resultados de las 38 peticiones de Postman de esta página corresponden a la validación pública anterior a este ajuste.
 
 ## Qué verifican los tests
 
