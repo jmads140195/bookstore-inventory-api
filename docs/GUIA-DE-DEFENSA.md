@@ -10,9 +10,9 @@ Para retomar Python y Django desde conocimientos de arquitectura. Léela con Swa
 >
 > Agregué login con tokens revocables y dos roles: básico consulta; completo modifica el inventario y administra usuarios. Las sesiones vencen y se revocan al cambiar contraseña o permisos. Hay límites de peticiones y validación explícita de campos.
 >
-> Docker ejecuta la API, PostgreSQL y el actualizador. Incluí tests, Postman y documentación OpenAPI. La configuración cloud está preparada y debe verificarse con su URL pública para completar la entrega.
+> Docker ejecuta la API, PostgreSQL y el actualizador. Incluí tests, Postman y documentación OpenAPI. La API está publicada y verificada mediante Cloudflare Tunnel desde mi PC. PostgreSQL sigue siendo local; migrarlo a una base gestionada cloud es el requisito externo pendiente.
 
-Adapta la última frase únicamente después de publicar y verificar la nube. No digas que está desplegado mientras falte ese paso.
+Distingue publicación HTTPS de alojamiento cloud gestionado. Cloudflare permite acceder a esta PC; no mueve PostgreSQL a la nube.
 
 ## 2. Recorrido de una petición
 

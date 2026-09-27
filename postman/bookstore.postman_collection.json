@@ -7,7 +7,7 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://127.0.0.1:8080"
+      "value": "https://pruebanextep.dateoapp.com"
     },
     {
       "key": "book_id",

@@ -1,6 +1,6 @@
 # Referencia de la API
 
-Versión 2.0. Base local: `http://127.0.0.1:8080`. La base pública está pendiente del despliegue. Documentación interactiva: `/docs`; contrato OpenAPI: `/schema`. Todas las rutas de API van **sin barra final**. Cuerpos JSON con `Content-Type: application/json`.
+Versión 2.0. Base local: `http://127.0.0.1:14559`. Base pública verificada: `https://pruebanextep.dateoapp.com`. En esta PC, la configuración pública exige HTTPS; utiliza el subdominio cuando esté activo el archivo Compose del túnel. Documentación interactiva: `/docs`; contrato OpenAPI: `/schema`. Todas las rutas de API van **sin barra final**. Cuerpos JSON con `Content-Type: application/json`.
 
 ## 1. Acceso y sesiones
 
@@ -217,7 +217,7 @@ Otros errores usan el mismo objeto `error` con `code` y `message`; `details` sol
 ## 7. Ejemplo PowerShell
 
 ```powershell
-$baseUrl = 'http://127.0.0.1:8080'
+$baseUrl = 'http://127.0.0.1:14559'
 $credential = Get-Credential -Message 'Cuenta de la API'
 $loginBody = @{username=$credential.UserName; password=$credential.GetNetworkCredential().Password} | ConvertTo-Json
 $session = Invoke-RestMethod "$baseUrl/auth/login" -Method Post -ContentType 'application/json' -Body $loginBody

@@ -2,7 +2,7 @@
 
 ## Estado actual y elección de alojamiento
 
-La API funciona en Docker local con PostgreSQL y un actualizador de tasas independiente. El usuario eligió publicar desde esta PC mediante Cloudflare Tunnel en `pruebanextep.dateoapp.com`. La asociación del dominio requiere autorizar Cloudflare; consultar [CLOUDFLARE.md](CLOUDFLARE.md) para el estado y los pasos.
+La API funciona en Docker local con PostgreSQL y un actualizador de tasas independiente. El usuario eligió publicar desde esta PC mediante Cloudflare Tunnel en `pruebanextep.dateoapp.com`. El túnel ya está conectado y la URL pública se verificó con Postman: 38 peticiones y 57 aserciones aprobadas. Consultar [CLOUDFLARE.md](CLOUDFLARE.md) para iniciar/detener y conocer las limitaciones.
 
 El túnel permite una URL HTTPS pública, pero **la base sigue siendo local**. El PDF pide una base gestionada en la nube: ese requisito continúa pendiente con esta modalidad. No se debe presentar el PostgreSQL local como cloud gestionado. La PC debe permanecer encendida, conectada y sin suspensión durante la evaluación.
 

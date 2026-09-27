@@ -4,7 +4,7 @@ API REST para la prueba de Nextep: inventario de libros, precios, login y dos ni
 
 **Listo:** código, autenticación, usuarios, tasas persistidas, actualizador independiente, Docker, tests, Swagger y Postman.
 
-**Publicación elegida:** [Cloudflare Tunnel desde esta PC](docs/CLOUDFLARE.md), pendiente de conexión y comprobación pública. **Requisito pendiente del PDF:** PostgreSQL gestionado cloud; la base Docker sigue siendo local. El VPS y los servicios existentes de Dateo no se modifican.
+**API publicada y verificada:** [Swagger público](https://pruebanextep.dateoapp.com/docs), mediante [Cloudflare Tunnel desde esta PC](docs/CLOUDFLARE.md). **Requisito pendiente del PDF:** PostgreSQL gestionado cloud; la base Docker sigue siendo local. El VPS y los servicios existentes de Dateo no se modificaron.
 
 ## Documentación
 
@@ -26,7 +26,7 @@ docker compose exec web python manage.py seed_demo
 
 El segundo comando pide una contraseña de al menos 12 caracteres sin mostrarla. No hay credenciales predeterminadas. Es idempotente: si el administrador ya existe, conserva su contraseña. Los demás usuarios se crean desde `POST /users`.
 
-Abre [Swagger local](http://127.0.0.1:8080/docs). Ejecuta `POST /auth/login`, copia el `token` devuelto y pégalo en **Authorize** (solo el token; Swagger añade `Bearer`). Después puedes probar las rutas protegidas.
+Abre [Swagger local](http://127.0.0.1:14559/docs). Ejecuta `POST /auth/login`, copia el `token` devuelto y pégalo en **Authorize** (solo el token; Swagger añade `Bearer`). Después puedes probar las rutas protegidas.
 
 Compose inicia PostgreSQL, la API y `rate-worker`. La base persiste en un volumen y no publica un puerto al host; la API solo escucha en el host local. El worker consulta si toca sincronizar cada minuto; normalmente hace dos consultas al proveedor al día, a las 08:00 y 15:00 de Caracas, además de la inicialización y reintentos.
 
@@ -37,7 +37,7 @@ docker compose exec web python manage.py test
 docker compose stop
 ```
 
-Para reanudar: `docker compose start`. `API_PORT` cambia el puerto local (8080 por defecto). `seed_demo` crea El Quijote sin sobrescribir un libro existente. Las claves de PostgreSQL de Compose son exclusivamente de demo.
+Para reanudar: `docker compose start`. `API_PORT` cambia el puerto local (14559 por defecto). `seed_demo` crea El Quijote sin sobrescribir un libro existente. Las claves de PostgreSQL de Compose son exclusivamente de demo.
 
 ## Probar con Postman
 
@@ -60,7 +60,7 @@ Copy-Item .env.example .env
 
 En otra terminal ejecuta `python manage.py run_rate_scheduler` usando ese mismo entorno virtual. En Linux/macOS el ejecutable está en `.venv/bin/python`. El `.env` permite SQLite para aprender; producción exige PostgreSQL. Los tests de bloqueos concurrentes necesitan PostgreSQL.
 
-En la sesión local preparada, el entorno virtual está en `../../work/.venv`. La instancia Python en 8000 y Docker en 8080 utilizan bases separadas. Para la entrega y Postman usa Docker en 8080.
+En la sesión local preparada, el entorno virtual está en `../../work/.venv`. La instancia Python en 8000 y Docker en 14559 utilizan bases separadas. Para la entrega y Postman usa Docker en 14559.
 
 ## Roles
 
